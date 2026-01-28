@@ -16,6 +16,7 @@ export default function AdminExam() {
         body: JSON.stringify({ title, maxAttempts, cooldownMinutes: cooldown }),
       });
       setExamId(res.examId);
+      setError("");
     } catch (e: any) {
       setError(e.message);
     }
@@ -28,6 +29,7 @@ export default function AdminExam() {
         body: JSON.stringify({ title, maxAttempts, cooldownMinutes: cooldown }),
       });
       setAttempts([]);
+      setError("");
     } catch (e: any) {
       setError(e.message);
     }
@@ -40,32 +42,60 @@ export default function AdminExam() {
 
   return (
     <>
-      <h2>Admin</h2>
+      <h2>Admin Panel</h2>
 
-      <input placeholder="Title" onChange={(e) => setTitle(e.target.value)} />
-      <input type="number" value={maxAttempts} onChange={(e) => setMaxAttempts(+e.target.value)} />
-      <input type="number" value={cooldown} onChange={(e) => setCooldown(+e.target.value)} />
+      <div className="form-group">
+        <label htmlFor="exam-title">Exam Title</label>
+        <input
+          id="exam-title"
+          placeholder="Enter exam title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      </div>
 
-      <br />
+      <div className="form-row">
+        <div className="form-group">
+          <label htmlFor="max-attempts">Max Attempts</label>
+          <input
+            id="max-attempts"
+            type="number"
+            value={maxAttempts}
+            onChange={(e) => setMaxAttempts(+e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="cooldown">Cooldown (min)</label>
+          <input id="cooldown" type="number" value={cooldown} onChange={(e) => setCooldown(+e.target.value)} />
+        </div>
+      </div>
 
-      <button onClick={create}>Create Exam</button>
-      <button onClick={update} disabled={!examId}>
-        Update Exam
-      </button>
-      <button onClick={loadAttempts} disabled={!examId}>
-        Load Attempts
-      </button>
+      <div className="button-group">
+        <button onClick={create}>Create Exam</button>
+        <button onClick={update} disabled={!examId} className="button-secondary">
+          Update Exam
+        </button>
+        <button onClick={loadAttempts} disabled={!examId} className="button-secondary">
+          Load Attempts
+        </button>
+      </div>
 
-      {examId && <p>Exam ID: {examId}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {examId && <div className="success-message">Exam ID: {examId}</div>}
+      {error && <div className="error-message">{error}</div>}
 
-      <ul>
-        {attempts.map((a) => (
-          <li key={a.attemptId}>
-            #{a.attemptNumber} — {a.status}
-          </li>
-        ))}
-      </ul>
+      {attempts.length > 0 && (
+        <div className="attempts-list">
+          <h3>Attempts</h3>
+          <ul>
+            {attempts.map((a) => (
+              <li key={a.attemptId}>
+                <span className="attempt-number">Attempt #{a.attemptNumber}</span>
+                <span className={`attempt-status ${a.status.toLowerCase()}`}>{a.status}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </>
   );
 }

@@ -43,7 +43,7 @@ final class AdminExamController extends AbstractController
         $this->em->flush();
 
         return $this->json(
-            ['id' => $exam->id->toRfc4122()],
+            ['examId' => $exam->id->toRfc4122()],
             201
         );
     }
