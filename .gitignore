@@ -1,0 +1,22 @@
+# ---- API (Symfony / PHP) ----
+api/vendor/
+api/var/cache/
+api/var/log/
+api/.env.local
+api/.env.test.local
+
+# ---- UI (React) ----
+ui/node_modules/
+ui/dist/
+ui/.env
+
+# ---- Docker ----
+*.log
+
+# ---- OS ----
+.DS_Store
+
+# Extra ignores
+bruno/
+.vscode/
+tools/

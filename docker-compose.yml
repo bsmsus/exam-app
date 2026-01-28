@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: exam
+      POSTGRES_USER: exam
+      POSTGRES_PASSWORD: exam
+      TZ: Asia/Kolkata
+      PGTZ: Asia/Kolkata
+    ports:
+      - "55432:5432"
+
+  api:
+    build: ./api
+    volumes:
+      - ./api:/var/www/html
+    environment:
+      APP_ENV: dev
+      APP_DEBUG: 1
+      DATABASE_URL: "postgresql://exam:exam@db:5432/exam?serverVersion=16"
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    command: php -S 0.0.0.0:8000 -t public
+  
+  swagger:
+    image: swaggerapi/swagger-ui
+    volumes:
+      - ./api/public/openapi.json:/openapi.json
+    environment:
+      SWAGGER_JSON: /openapi.json
+
+  ui:
+    build: ./ui
+    environment:
+      VITE_API_BASE_URL: http://api:8000
+    depends_on:
+      - api
+    ports:
+      - "3005:80"
+
+
+
+
+

@@ -1,0 +1,49 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Exam Management API",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/admin/exams": {
+            "post": {
+                "summary": "Create exam",
+                "operationId": "23127878dcad77b5dcd264859f5005f3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "maxAttempts",
+                                    "cooldownMinutes"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "maxAttempts": {
+                                        "type": "integer"
+                                    },
+                                    "cooldownMinutes": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Exam created"
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        }
+    }
+}
