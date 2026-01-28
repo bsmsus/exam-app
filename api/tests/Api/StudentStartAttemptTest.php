@@ -12,9 +12,17 @@ use Symfony\Component\Uid\Uuid;
 
 final class StudentStartAttemptTest extends WebTestCase
 {
+    private function clearDatabase(): void
+    {
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\AttemptEntity')->execute();
+        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\ExamEntity')->execute();
+    }
+
     public function test_student_can_start_attempt_when_allowed(): void
     {
         $client = static::createClient();
+        $this->clearDatabase();
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
         // Arrange: exam
@@ -53,6 +61,7 @@ final class StudentStartAttemptTest extends WebTestCase
     public function test_student_cannot_start_attempt_during_cooldown(): void
     {
         $client = static::createClient();
+        $this->clearDatabase();
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
         // Arrange: exam

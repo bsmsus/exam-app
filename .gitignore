@@ -20,3 +20,4 @@ ui/.env
 bruno/
 .vscode/
 tools/
+.php-cs-fixer.dist.php

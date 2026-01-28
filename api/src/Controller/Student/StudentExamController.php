@@ -101,10 +101,15 @@ final class StudentExamController extends AbstractController
                 : null;
 
             if ($availableAt && new \DateTimeImmutable() < $availableAt) {
-                return $this->json([
-                    'error' => 'Cooldown active',
-                    'availableAt' => $availableAt->format(DATE_ATOM)
-                ], 409);
+                return new JsonResponse(
+                    [
+                        'error' => sprintf(
+                            'Your next attempt will be available at %s',
+                            $availableAt->format('d M Y, h:i A')
+                        )
+                    ],
+                    409
+                );
             }
         }
 

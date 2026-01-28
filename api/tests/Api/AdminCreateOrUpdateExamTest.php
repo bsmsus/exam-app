@@ -12,17 +12,30 @@ use Symfony\Component\Uid\Uuid;
 
 final class AdminCreateOrUpdateExamTest extends WebTestCase
 {
+    private function clearDatabase(): void
+    {
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\AttemptEntity')->execute();
+        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\ExamEntity')->execute();
+    }
+
     public function test_admin_create_exam(): void
     {
         $client = static::createClient();
+        $this->clearDatabase();
 
-        $client->request('POST', '/admin/exams', [
-            'json' => [
+        $client->request(
+            'POST',
+            '/admin/exams',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
                 'title' => 'Math',
                 'maxAttempts' => 3,
                 'cooldownMinutes' => 60,
-            ],
-        ]);
+            ])
+        );
 
         self::assertResponseStatusCodeSame(201);
 
@@ -33,6 +46,7 @@ final class AdminCreateOrUpdateExamTest extends WebTestCase
     public function test_update_exam_resets_attempts(): void
     {
         $client = static::createClient();
+        $this->clearDatabase();
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
         $exam = new ExamEntity(Uuid::v4(), 'Old', 3, 10);
@@ -49,13 +63,18 @@ final class AdminCreateOrUpdateExamTest extends WebTestCase
         $em->persist($attempt);
         $em->flush();
 
-        $client->request('PUT', '/admin/exams/' . $exam->id->toRfc4122(), [
-            'json' => [
+        $client->request(
+            'PUT',
+            '/admin/exams/' . $exam->id->toRfc4122(),
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
                 'title' => 'New',
                 'maxAttempts' => 5,
                 'cooldownMinutes' => 30,
-            ],
-        ]);
+            ])
+        );
 
         self::assertResponseStatusCodeSame(204);
         self::assertSame(0, $em->getRepository(AttemptEntity::class)->count([]));

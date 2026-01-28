@@ -12,9 +12,16 @@ use Symfony\Component\Uid\Uuid;
 
 final class UpdateExamResetsAttemptsTest extends KernelTestCase
 {
-    public function test_exam_update_resets_attempts(): void
+    protected function setUp(): void
     {
         self::bootKernel();
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\AttemptEntity')->execute();
+        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\ExamEntity')->execute();
+    }
+
+    public function test_exam_update_resets_attempts(): void
+    {
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $service = static::getContainer()->get(UpdateExamService::class);
 
