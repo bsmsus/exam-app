@@ -87,36 +87,6 @@ docker-compose down -v
 
 ## Architecture
 
-### Project Structure
-
-```
-exam-app/
-├── api/                          # Symfony Backend
-│   ├── src/
-│   │   ├── Application/          # Application services (business logic)
-│   │   ├── Controller/
-│   │   │   ├── Admin/            # Admin endpoints
-│   │   │   └── Student/          # Student endpoints
-│   │   ├── Domain/               # Domain models & rules
-│   │   │   ├── Attempt/          # Attempt value objects
-│   │   │   ├── Exam/             # Exam value objects
-│   │   │   └── Rules/            # Business rules (ExamRules)
-│   │   ├── Http/                 # Request DTOs
-│   │   └── Infrastructure/       # Doctrine entities
-│   ├── tests/
-│   │   ├── Api/                  # API integration tests
-│   │   ├── Domain/               # Unit tests
-│   │   └── Integration/          # Service integration tests
-│   └── migrations/               # Database migrations
-├── ui/                           # React Frontend
-│   ├── src/
-│   │   ├── admin/                # Admin components
-│   │   ├── student/              # Student components
-│   │   └── test/                 # Test setup
-│   └── Dockerfile
-└── docker-compose.yml
-```
-
 ### Tech Stack
 
 | Layer    | Technology                                       |
