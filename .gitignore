@@ -21,3 +21,4 @@ bruno/
 .vscode/
 tools/
 .php-cs-fixer.dist.php
+api/phpunit.dist.xml

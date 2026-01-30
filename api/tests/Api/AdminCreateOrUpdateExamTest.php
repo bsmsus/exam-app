@@ -7,76 +7,50 @@ namespace App\Tests\Api;
 use App\Infrastructure\Doctrine\ExamEntity;
 use App\Infrastructure\Doctrine\AttemptEntity;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Uid\Uuid;
 
-final class AdminCreateOrUpdateExamTest extends WebTestCase
+final class AdminCreateOrUpdateExamTest extends AuthenticatedWebTestCase
 {
-    private function clearDatabase(): void
-    {
-        $em = static::getContainer()->get(EntityManagerInterface::class);
-        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\AttemptEntity')->execute();
-        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\ExamEntity')->execute();
-    }
-
     public function test_admin_create_exam(): void
     {
         $client = static::createClient();
         $this->clearDatabase();
+        $this->createTestAdmin();
 
-        $client->request(
-            'POST',
-            '/admin/exams',
-            [],
-            [],
-            ['CONTENT_TYPE' => 'application/json'],
-            json_encode([
-                'title' => 'Math',
-                'maxAttempts' => 3,
-                'cooldownMinutes' => 60,
-            ])
-        );
+        $this->requestAsAdmin($client, 'POST', '/admin/exams', [
+            'title' => 'Math',
+            'maxAttempts' => 3,
+            'cooldownMinutes' => 60,
+        ]);
 
         self::assertResponseStatusCodeSame(201);
 
         $data = json_decode($client->getResponse()->getContent(), true);
-        self::assertArrayHasKey('id', $data);
+        self::assertArrayHasKey('examId', $data);
     }
 
     public function test_update_exam_resets_attempts(): void
     {
         $client = static::createClient();
         $this->clearDatabase();
+        $this->createTestAdmin();
+        $this->createTestStudent();
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
         $exam = new ExamEntity(Uuid::v4(), 'Old', 3, 10);
         $em->persist($exam);
-
-        $attempt = new AttemptEntity();
-        $attempt->id = Uuid::v4();
-        $attempt->exam = $exam;
-        $attempt->attemptNumber = 1;
-        $attempt->status = 'COMPLETED';
-        $attempt->startedAt = new \DateTimeImmutable('-10 minutes');
-        $attempt->endedAt = new \DateTimeImmutable('-5 minutes');
-
-        $em->persist($attempt);
         $em->flush();
 
-        $client->request(
-            'PUT',
-            '/admin/exams/' . $exam->id->toRfc4122(),
-            [],
-            [],
-            ['CONTENT_TYPE' => 'application/json'],
-            json_encode([
-                'title' => 'New',
-                'maxAttempts' => 5,
-                'cooldownMinutes' => 30,
-            ])
-        );
+        $this->requestAsAdmin($client, 'PUT', '/admin/exams/' . $exam->id->toRfc4122(), [
+            'title' => 'New',
+            'maxAttempts' => 5,
+            'cooldownMinutes' => 30,
+        ]);
 
         self::assertResponseStatusCodeSame(204);
-        self::assertSame(0, $em->getRepository(AttemptEntity::class)->count([]));
+        self::assertSame(
+            0,
+            $em->getRepository(AttemptEntity::class)->count([])
+        );
     }
 }

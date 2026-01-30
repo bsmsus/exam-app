@@ -2,13 +2,843 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Exam Management API",
+        "description": "API for managing exams, students, and attempt tracking",
         "version": "1.0.0"
     },
+    "servers": [
+        {
+            "url": "http://localhost:8000",
+            "description": "Local development server"
+        }
+    ],
     "paths": {
-        "/admin/exams": {
+        "/auth/admin/register": {
             "post": {
-                "summary": "Create exam",
-                "operationId": "23127878dcad77b5dcd264859f5005f3",
+                "tags": [
+                    "Admin Auth"
+                ],
+                "summary": "Register a new admin",
+                "operationId": "ad2099628601f4092e298489b6888f59",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Admin"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "admin@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "minLength": 6,
+                                        "example": "secret123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Admin registered successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "user": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "admin"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "accessToken": {
+                                            "type": "string"
+                                        },
+                                        "refreshToken": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    },
+                    "409": {
+                        "description": "Email already registered"
+                    }
+                }
+            }
+        },
+        "/auth/admin/login": {
+            "post": {
+                "tags": [
+                    "Admin Auth"
+                ],
+                "summary": "Admin login",
+                "operationId": "821e02ccf2b75e6c4c04262e78582378",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "admin@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "secret123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "user": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "admin"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "accessToken": {
+                                            "type": "string"
+                                        },
+                                        "refreshToken": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Invalid credentials"
+                    }
+                }
+            }
+        },
+        "/auth/admin/refresh": {
+            "post": {
+                "tags": [
+                    "Admin Auth"
+                ],
+                "summary": "Refresh admin access token",
+                "operationId": "a70e03d0a049301104a34055f03b8609",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "refreshToken"
+                                ],
+                                "properties": {
+                                    "refreshToken": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Token refreshed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "accessToken": {
+                                            "type": "string"
+                                        },
+                                        "refreshToken": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Refresh token is required"
+                    },
+                    "401": {
+                        "description": "Invalid or expired refresh token"
+                    }
+                }
+            }
+        },
+        "/auth/admin/logout": {
+            "post": {
+                "tags": [
+                    "Admin Auth"
+                ],
+                "summary": "Admin logout",
+                "operationId": "1eeaf49f1f3e8b784892d18afec5b515",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "refreshToken": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Logged out successfully"
+                    }
+                }
+            }
+        },
+        "/auth/student/register": {
+            "post": {
+                "tags": [
+                    "Student Auth"
+                ],
+                "summary": "Register a new student",
+                "operationId": "5e614f80af344c95fe902e975fec4de0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Jane Student"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "student@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "minLength": 6,
+                                        "example": "secret123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Student registered successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "user": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "student"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "accessToken": {
+                                            "type": "string"
+                                        },
+                                        "refreshToken": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    },
+                    "409": {
+                        "description": "Email already registered"
+                    }
+                }
+            }
+        },
+        "/auth/student/login": {
+            "post": {
+                "tags": [
+                    "Student Auth"
+                ],
+                "summary": "Student login",
+                "operationId": "2021e962dc7683122a726d1bef39ebbf",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "student@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "secret123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "user": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "student"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "accessToken": {
+                                            "type": "string"
+                                        },
+                                        "refreshToken": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Invalid credentials"
+                    }
+                }
+            }
+        },
+        "/auth/student/refresh": {
+            "post": {
+                "tags": [
+                    "Student Auth"
+                ],
+                "summary": "Refresh student access token",
+                "operationId": "bc3f98a67fc86ecb1ab86030d0e23477",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "refreshToken"
+                                ],
+                                "properties": {
+                                    "refreshToken": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Token refreshed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "accessToken": {
+                                            "type": "string"
+                                        },
+                                        "refreshToken": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Refresh token is required"
+                    },
+                    "401": {
+                        "description": "Invalid or expired refresh token"
+                    }
+                }
+            }
+        },
+        "/auth/student/logout": {
+            "post": {
+                "tags": [
+                    "Student Auth"
+                ],
+                "summary": "Student logout",
+                "operationId": "2efb33a1406ac1aece074a24e3758faa",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "refreshToken": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Logged out successfully"
+                    }
+                }
+            }
+        },
+        "/student/exams/{examId}": {
+            "get": {
+                "tags": [
+                    "Student Exams"
+                ],
+                "summary": "Get student dashboard for an exam",
+                "description": "Returns exam details, attempt status, and whether the student can start a new attempt",
+                "operationId": "6605d67a6505d75bb1701af214a1ffe0",
+                "parameters": [
+                    {
+                        "name": "examId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exam dashboard",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "title": {
+                                            "type": "string"
+                                        },
+                                        "maxAttempts": {
+                                            "type": "integer"
+                                        },
+                                        "attemptsRemaining": {
+                                            "type": "integer"
+                                        },
+                                        "cooldownMinutes": {
+                                            "type": "integer"
+                                        },
+                                        "cooldownUntil": {
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "nullable": true
+                                        },
+                                        "canStart": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Exam not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/student/exams/{examId}/start": {
+            "post": {
+                "tags": [
+                    "Student Exams"
+                ],
+                "summary": "Start a new exam attempt",
+                "operationId": "a2b8ab25e40bcaf225a899da03e299ac",
+                "parameters": [
+                    {
+                        "name": "examId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Attempt started",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "attemptId": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Exam not found"
+                    },
+                    "409": {
+                        "description": "Cannot start attempt (no attempts left, cooldown active, or attempt in progress)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/student/attempts/{attemptId}/submit": {
+            "post": {
+                "tags": [
+                    "Student Exams"
+                ],
+                "summary": "Submit an exam attempt",
+                "operationId": "6b0a96b64276a15a48eb14f635cf39d5",
+                "parameters": [
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Attempt submitted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Attempt not found"
+                    },
+                    "409": {
+                        "description": "Invalid attempt state"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/student/attempts": {
+            "get": {
+                "tags": [
+                    "Student Exams"
+                ],
+                "summary": "Get student attempt history",
+                "operationId": "b9358c82e7e1a454322cbe88e604a1c4",
+                "responses": {
+                    "200": {
+                        "description": "List of student attempts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "examId": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "examTitle": {
+                                                "type": "string"
+                                            },
+                                            "attemptNumber": {
+                                                "type": "integer"
+                                            },
+                                            "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "IN_PROGRESS",
+                                                    "COMPLETED"
+                                                ]
+                                            },
+                                            "startedAt": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "endedAt": {
+                                                "type": "string",
+                                                "format": "date-time",
+                                                "nullable": true
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/student/exams/{examId}/current-attempt": {
+            "get": {
+                "tags": [
+                    "Student Exams"
+                ],
+                "summary": "Get current in-progress attempt for an exam",
+                "operationId": "868dc07fade518e903ee2bd3fb222399",
+                "parameters": [
+                    {
+                        "name": "examId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Current attempt or null",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "currentAttempt": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "attemptNumber": {
+                                                    "type": "integer"
+                                                },
+                                                "startedAt": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Exam not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/exams": {
+            "get": {
+                "tags": [
+                    "Admin Exams"
+                ],
+                "summary": "List all exams",
+                "operationId": "1a6bc0ecfd8688d4d884f9374f45dece",
+                "responses": {
+                    "200": {
+                        "description": "List of exams",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "title": {
+                                                "type": "string"
+                                            },
+                                            "maxAttempts": {
+                                                "type": "integer"
+                                            },
+                                            "cooldownMinutes": {
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin Exams"
+                ],
+                "summary": "Create a new exam",
+                "operationId": "4fd2f7f107e96cde8fa884367ba8a1a0",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -21,13 +851,18 @@
                                 ],
                                 "properties": {
                                     "title": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "Mathematics Final Exam"
                                     },
                                     "maxAttempts": {
-                                        "type": "integer"
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "example": 3
                                     },
                                     "cooldownMinutes": {
-                                        "type": "integer"
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "example": 60
                                     }
                                 },
                                 "type": "object"
@@ -37,13 +872,266 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Exam created"
+                        "description": "Exam created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "examId": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "400": {
                         "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/exams/{examId}": {
+            "get": {
+                "tags": [
+                    "Admin Exams"
+                ],
+                "summary": "Get exam details",
+                "operationId": "8d1b78e726e4a62f4aec0bc3af0c5df3",
+                "parameters": [
+                    {
+                        "name": "examId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exam details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        },
+                                        "title": {
+                                            "type": "string"
+                                        },
+                                        "maxAttempts": {
+                                            "type": "integer"
+                                        },
+                                        "cooldownMinutes": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Exam not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin Exams"
+                ],
+                "summary": "Update an exam (resets all attempts)",
+                "operationId": "7157ff5d8ce82e73ab9feeed5b691f54",
+                "parameters": [
+                    {
+                        "name": "examId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "maxAttempts",
+                                    "cooldownMinutes"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Updated Exam Title"
+                                    },
+                                    "maxAttempts": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "example": 5
+                                    },
+                                    "cooldownMinutes": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "example": 120
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Exam updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Exam not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/exams/{examId}/attempts": {
+            "get": {
+                "tags": [
+                    "Admin Exams"
+                ],
+                "summary": "Get attempt history for an exam",
+                "operationId": "58e82c6753a02cddda0fbe3cb23dbc9e",
+                "parameters": [
+                    {
+                        "name": "examId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of attempts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "studentId": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "studentName": {
+                                                "type": "string"
+                                            },
+                                            "studentEmail": {
+                                                "type": "string"
+                                            },
+                                            "attemptNumber": {
+                                                "type": "integer"
+                                            },
+                                            "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "IN_PROGRESS",
+                                                    "COMPLETED"
+                                                ]
+                                            },
+                                            "startedAt": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "endedAt": {
+                                                "type": "string",
+                                                "format": "date-time",
+                                                "nullable": true
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Exam not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         }
-    }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "JWT Authorization header using Bearer scheme",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Admin Auth",
+            "description": "Admin authentication endpoints"
+        },
+        {
+            "name": "Student Auth",
+            "description": "Student authentication endpoints"
+        },
+        {
+            "name": "Admin Exams",
+            "description": "Admin exam management endpoints"
+        },
+        {
+            "name": "Student Exams",
+            "description": "Student exam and attempt endpoints"
+        }
+    ]
 }

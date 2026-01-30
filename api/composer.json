@@ -10,6 +10,7 @@
         "ext-ctype": "*",
         "ext-iconv": "*",
         "doctrine/doctrine-bundle": "^3.2.2",
+        "firebase/php-jwt": "^6.11.1",
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6.1",
         "nelmio/cors-bundle": "^2.6",
@@ -66,7 +67,8 @@
         ],
         "post-update-cmd": [
             "@auto-scripts"
-        ]
+        ],
+        "test": "APP_ENV=test php bin/phpunit"
     },
     "conflict": {
         "symfony/symfony": "*"

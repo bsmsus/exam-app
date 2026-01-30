@@ -1,5 +1,5 @@
 .app-container {
-  max-width: 600px;
+  max-width: 900px;
   margin: 2rem auto;
   padding: 0 1rem;
 }
@@ -90,6 +90,25 @@
   border-radius: 6px;
   margin-top: 1rem;
   font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.copy-btn {
+  background-color: #065f46;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.copy-btn:hover {
+  background-color: #047857;
 }
 
 .error-message {
@@ -160,4 +179,240 @@
 .attempt-status.in-progress {
   background-color: #fef3c7;
   color: #92400e;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+}
+
+/* User Info */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.user-badge {
+  background-color: #4f46e5;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.logout-btn {
+  background-color: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.logout-btn:hover {
+  background-color: #dc2626;
+}
+
+/* Login */
+.login-container {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.login-container h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.user-type-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.toggle-btn {
+  flex: 1;
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 2px solid transparent;
+}
+
+.toggle-btn.active {
+  background-color: #eef2ff;
+  color: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.toggle-btn:hover {
+  background-color: #e5e7eb;
+}
+
+.toggle-btn.active:hover {
+  background-color: #e0e7ff;
+}
+
+.submit-btn {
+  width: 100%;
+  margin-top: 1rem;
+  background-color: #4f46e5;
+}
+
+.submit-btn:hover {
+  background-color: #4338ca;
+}
+
+.switch-mode {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #4f46e5;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  text-decoration: underline;
+}
+
+.link-btn:hover {
+  color: #4338ca;
+}
+
+/* Exam Dashboard */
+.exam-dashboard {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.exam-dashboard h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #1a1a2e;
+}
+
+.details-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.details-table th,
+.details-table td {
+  padding: 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.details-table th {
+  font-weight: 500;
+  color: #6b7280;
+  width: 40%;
+}
+
+.details-table td {
+  color: #1a1a2e;
+}
+
+.current-attempt {
+  background-color: #fef3c7;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.current-attempt h4 {
+  margin: 0 0 0.5rem 0;
+  color: #92400e;
+}
+
+.current-attempt p {
+  margin: 0 0 1rem 0;
+  color: #78350f;
+  font-size: 0.875rem;
+}
+
+.start-btn {
+  width: 100%;
+  background-color: #10b981;
+  margin-top: 1rem;
+}
+
+.start-btn:hover {
+  background-color: #059669;
+}
+
+/* Attempt History */
+.attempt-history {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.attempt-history h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #1a1a2e;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.history-table th,
+.history-table td {
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.history-table th {
+  font-weight: 600;
+  color: #374151;
+  background-color: #f9fafb;
+}
+
+.history-table td {
+  color: #4b5563;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge.in_progress {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.completed {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.no-data {
+  color: #6b7280;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
+}
+
+.mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  word-break: break-all;
 }

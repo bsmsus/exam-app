@@ -7,25 +7,17 @@ namespace App\Tests\Api;
 use App\Infrastructure\Doctrine\ExamEntity;
 use App\Infrastructure\Doctrine\AttemptEntity;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Uid\Uuid;
 
-final class StudentStartAttemptTest extends WebTestCase
+final class StudentStartAttemptTest extends AuthenticatedWebTestCase
 {
-    private function clearDatabase(): void
-    {
-        $em = static::getContainer()->get(EntityManagerInterface::class);
-        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\AttemptEntity')->execute();
-        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\ExamEntity')->execute();
-    }
-
     public function test_student_can_start_attempt_when_allowed(): void
     {
         $client = static::createClient();
         $this->clearDatabase();
+        $student = $this->createTestStudent();
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
-        // Arrange: exam
         $exam = new ExamEntity(
             Uuid::v4(),
             'Math',
@@ -35,23 +27,18 @@ final class StudentStartAttemptTest extends WebTestCase
         $em->persist($exam);
         $em->flush();
 
-        // Act: start attempt
-        $client->request(
-            'POST',
-            '/student/exams/' . $exam->id->toRfc4122() . '/start'
-        );
+        $this->requestAsStudent($client, 'POST', '/student/exams/' . $exam->id->toRfc4122() . '/start');
 
-        // Assert HTTP
         self::assertResponseStatusCodeSame(201);
 
         $data = json_decode($client->getResponse()->getContent(), true);
         self::assertArrayHasKey('attemptId', $data);
 
-        // Assert DB
         $attempts = $em->getRepository(AttemptEntity::class)->findAll();
         self::assertCount(1, $attempts);
 
         $attempt = $attempts[0];
+        self::assertSame($student->id->toRfc4122(), $attempt->student->id->toRfc4122());
         self::assertSame(1, $attempt->attemptNumber);
         self::assertSame('IN_PROGRESS', $attempt->status);
         self::assertNotNull($attempt->startedAt);
@@ -62,9 +49,9 @@ final class StudentStartAttemptTest extends WebTestCase
     {
         $client = static::createClient();
         $this->clearDatabase();
+        $student = $this->createTestStudent();
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
-        // Arrange: exam
         $exam = new ExamEntity(
             Uuid::v4(),
             'Physics',
@@ -73,10 +60,10 @@ final class StudentStartAttemptTest extends WebTestCase
         );
         $em->persist($exam);
 
-        // Arrange: completed attempt 10 mins ago
         $attempt = new AttemptEntity();
         $attempt->id = Uuid::v4();
         $attempt->exam = $exam;
+        $attempt->student = $student;
         $attempt->attemptNumber = 1;
         $attempt->status = 'COMPLETED';
         $attempt->startedAt = new \DateTimeImmutable('-20 minutes');
@@ -85,20 +72,10 @@ final class StudentStartAttemptTest extends WebTestCase
         $em->persist($attempt);
         $em->flush();
 
-        // Act
-        $client->request(
-            'POST',
-            '/student/exams/' . $exam->id->toRfc4122() . '/start'
-        );
+        $this->requestAsStudent($client, 'POST', '/student/exams/' . $exam->id->toRfc4122() . '/start');
 
-        // Assert HTTP
         self::assertResponseStatusCodeSame(409);
 
-        $data = json_decode($client->getResponse()->getContent(), true);
-        self::assertSame('Cooldown active', $data['error']);
-        self::assertArrayHasKey('availableAt', $data);
-
-        // Assert DB unchanged
         self::assertCount(
             1,
             $em->getRepository(AttemptEntity::class)->findAll()

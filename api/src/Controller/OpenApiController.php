@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Controller;
@@ -14,7 +15,7 @@ final class OpenApiController
     public function __invoke(): JsonResponse
     {
         $finder = new Finder();
-        $finder->files()->in(__DIR__);
+        $finder->files()->in(__DIR__)->name('*.php');
 
         $generator = new Generator();
         $openapi = $generator->generate($finder);

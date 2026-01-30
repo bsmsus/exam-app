@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Infrastructure\Doctrine;
@@ -9,9 +10,10 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Entity]
 #[ORM\Table(name: 'attempts')]
 #[ORM\UniqueConstraint(
-    name: 'uniq_exam_attempt',
-    columns: ['exam_id', 'attempt_number']
+    name: 'uniq_exam_student_attempt',
+    columns: ['exam_id', 'student_id', 'attempt_number']
 )]
+#[ORM\Index(columns: ['student_id'], name: 'idx_attempt_student')]
 class AttemptEntity
 {
     #[ORM\Id]
@@ -21,6 +23,10 @@ class AttemptEntity
     #[ORM\ManyToOne(targetEntity: ExamEntity::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     public ExamEntity $exam;
+
+    #[ORM\ManyToOne(targetEntity: StudentEntity::class)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    public StudentEntity $student;
 
     #[ORM\Column(type: 'integer')]
     public int $attemptNumber;
