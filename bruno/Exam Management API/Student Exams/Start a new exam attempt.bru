@@ -1,0 +1,137 @@
+meta {
+  name: Start a new exam attempt
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/student/exams/:examId/start
+  body: none
+  auth: bearer
+}
+
+params:path {
+  examId: 
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+example {
+  name: 201 Response
+  description: Attempt started
+  
+  request: {
+    url: {{baseUrl}}/student/exams/:examId/start
+    method: POST
+    mode: none
+    params:path: {
+      examId: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 201
+      text: Created
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "attemptId": ""
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 401 Response
+  description: Unauthorized
+  
+  request: {
+    url: {{baseUrl}}/student/exams/:examId/start
+    method: POST
+    mode: none
+    params:path: {
+      examId: 
+    }
+  }
+  
+  response: {
+    status: {
+      code: 401
+      text: Unauthorized
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}
+
+example {
+  name: 404 Response
+  description: Exam not found
+  
+  request: {
+    url: {{baseUrl}}/student/exams/:examId/start
+    method: POST
+    mode: none
+    params:path: {
+      examId: 
+    }
+  }
+  
+  response: {
+    status: {
+      code: 404
+      text: Not Found
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}
+
+example {
+  name: 409 Response
+  description: Cannot start attempt (no attempts left, cooldown active, or attempt in progress)
+  
+  request: {
+    url: {{baseUrl}}/student/exams/:examId/start
+    method: POST
+    mode: none
+    params:path: {
+      examId: 
+    }
+  }
+  
+  response: {
+    status: {
+      code: 409
+      text: Conflict
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}

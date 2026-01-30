@@ -1,0 +1,131 @@
+meta {
+  name: Submit an exam attempt
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/student/attempts/:attemptId/submit
+  body: none
+  auth: bearer
+}
+
+params:path {
+  attemptId: 
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+example {
+  name: 204 Response
+  description: Attempt submitted successfully
+  
+  request: {
+    url: {{baseUrl}}/student/attempts/:attemptId/submit
+    method: POST
+    mode: none
+    params:path: {
+      attemptId: 
+    }
+  }
+  
+  response: {
+    status: {
+      code: 204
+      text: No Content
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}
+
+example {
+  name: 401 Response
+  description: Unauthorized
+  
+  request: {
+    url: {{baseUrl}}/student/attempts/:attemptId/submit
+    method: POST
+    mode: none
+    params:path: {
+      attemptId: 
+    }
+  }
+  
+  response: {
+    status: {
+      code: 401
+      text: Unauthorized
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}
+
+example {
+  name: 404 Response
+  description: Attempt not found
+  
+  request: {
+    url: {{baseUrl}}/student/attempts/:attemptId/submit
+    method: POST
+    mode: none
+    params:path: {
+      attemptId: 
+    }
+  }
+  
+  response: {
+    status: {
+      code: 404
+      text: Not Found
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}
+
+example {
+  name: 409 Response
+  description: Invalid attempt state
+  
+  request: {
+    url: {{baseUrl}}/student/attempts/:attemptId/submit
+    method: POST
+    mode: none
+    params:path: {
+      attemptId: 
+    }
+  }
+  
+  response: {
+    status: {
+      code: 409
+      text: Conflict
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}

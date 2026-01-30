@@ -1,0 +1,113 @@
+meta {
+  name: Get current in-progress attempt for an exam
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/student/exams/:examId/current-attempt
+  body: none
+  auth: bearer
+}
+
+params:path {
+  examId: 
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+example {
+  name: 200 Response
+  description: Current attempt or null
+  
+  request: {
+    url: {{baseUrl}}/student/exams/:examId/current-attempt
+    method: GET
+    mode: none
+    params:path: {
+      examId: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "currentAttempt": {
+            "id": "",
+            "attemptNumber": 0,
+            "startedAt": ""
+          }
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 401 Response
+  description: Unauthorized
+  
+  request: {
+    url: {{baseUrl}}/student/exams/:examId/current-attempt
+    method: GET
+    mode: none
+    params:path: {
+      examId: 
+    }
+  }
+  
+  response: {
+    status: {
+      code: 401
+      text: Unauthorized
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}
+
+example {
+  name: 404 Response
+  description: Exam not found
+  
+  request: {
+    url: {{baseUrl}}/student/exams/:examId/current-attempt
+    method: GET
+    mode: none
+    params:path: {
+      examId: 
+    }
+  }
+  
+  response: {
+    status: {
+      code: 404
+      text: Not Found
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}

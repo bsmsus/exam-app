@@ -1,0 +1,76 @@
+meta {
+  name: List all exams
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/admin/exams
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+example {
+  name: 200 Response
+  description: List of exams
+  
+  request: {
+    url: {{baseUrl}}/admin/exams
+    method: GET
+    mode: none
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        [
+          {
+            "id": "",
+            "title": "",
+            "maxAttempts": 0,
+            "cooldownMinutes": 0
+          }
+        ]
+      '''
+    }
+  }
+}
+
+example {
+  name: 401 Response
+  description: Unauthorized
+  
+  request: {
+    url: {{baseUrl}}/admin/exams
+    method: GET
+    mode: none
+  }
+  
+  response: {
+    status: {
+      code: 401
+      text: Unauthorized
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}

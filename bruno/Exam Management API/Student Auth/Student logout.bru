@@ -1,0 +1,47 @@
+meta {
+  name: Student logout
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/auth/student/logout
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "refreshToken": ""
+  }
+}
+
+example {
+  name: 204 Response
+  description: Logged out successfully
+  
+  request: {
+    url: {{baseUrl}}/auth/student/logout
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "refreshToken": ""
+      }
+    }
+  }
+  
+  response: {
+    status: {
+      code: 204
+      text: No Content
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}

@@ -1,0 +1,79 @@
+meta {
+  name: Get student attempt history
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/student/attempts
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+example {
+  name: 200 Response
+  description: List of student attempts
+  
+  request: {
+    url: {{baseUrl}}/student/attempts
+    method: GET
+    mode: none
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        [
+          {
+            "id": "",
+            "examId": "",
+            "examTitle": "",
+            "attemptNumber": 0,
+            "status": "",
+            "startedAt": "",
+            "endedAt": ""
+          }
+        ]
+      '''
+    }
+  }
+}
+
+example {
+  name: 401 Response
+  description: Unauthorized
+  
+  request: {
+    url: {{baseUrl}}/student/attempts
+    method: GET
+    mode: none
+  }
+  
+  response: {
+    status: {
+      code: 401
+      text: Unauthorized
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}

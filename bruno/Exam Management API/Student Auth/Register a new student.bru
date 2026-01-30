@@ -1,0 +1,128 @@
+meta {
+  name: Register a new student
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/auth/student/register
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "",
+    "email": "",
+    "password": ""
+  }
+}
+
+example {
+  name: 201 Response
+  description: Student registered successfully
+  
+  request: {
+    url: {{baseUrl}}/auth/student/register
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "name": "",
+        "email": "",
+        "password": ""
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 201
+      text: Created
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "user": {
+            "id": "",
+            "name": "",
+            "email": "",
+            "type": ""
+          },
+          "accessToken": "",
+          "refreshToken": ""
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 400 Response
+  description: Validation error
+  
+  request: {
+    url: {{baseUrl}}/auth/student/register
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "name": "",
+        "email": "",
+        "password": ""
+      }
+    }
+  }
+  
+  response: {
+    status: {
+      code: 400
+      text: Bad Request
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}
+
+example {
+  name: 409 Response
+  description: Email already registered
+  
+  request: {
+    url: {{baseUrl}}/auth/student/register
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "name": "",
+        "email": "",
+        "password": ""
+      }
+    }
+  }
+  
+  response: {
+    status: {
+      code: 409
+      text: Conflict
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}
