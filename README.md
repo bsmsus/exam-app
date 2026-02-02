@@ -44,6 +44,12 @@ docker-compose exec api php bin/console doctrine:migrations:migrate --no-interac
 ### Backend Tests (PHPUnit - API + Integration + Unit)
 
 ```bash
+# Create Mock DB
+docker-compose exec api env APP_ENV=test php bin/console doctrine:database:create
+
+# Execute migration on MOCK DB
+docker-compose exec api env APP_ENV=test php bin/console doctrine:migrations:migrate
+
 # Using Composer script
 docker-compose exec api composer test
 
