@@ -4,28 +4,22 @@ declare(strict_types=1);
 
 namespace App\Controller\Auth;
 
-use App\Application\Auth\JwtService;
-use App\Application\Auth\PasswordService;
-use App\Application\Auth\RefreshTokenService;
-use App\Infrastructure\Doctrine\AdminEntity;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Application\Auth\AdminAuthService;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Uid\Uuid;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
+use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 
 #[Route('/auth/admin')]
 final class AdminAuthController extends AbstractController
 {
     public function __construct(
-        private EntityManagerInterface $em,
-        private JwtService $jwtService,
-        private PasswordService $passwordService,
-        private RefreshTokenService $refreshTokenService
-    ) {
-    }
+        private AdminAuthService $adminAuthService
+    ) {}
 
     #[Route('/register', methods: ['POST'])]
     #[OA\Post(
@@ -68,49 +62,29 @@ final class AdminAuthController extends AbstractController
     {
         $data = $request->toArray();
 
-        $name = trim($data['name'] ?? '');
-        $email = trim($data['email'] ?? '');
-        $password = $data['password'] ?? '';
-
-        if (!$name || !$email || !$password) {
+        if (
+            empty($data['name']) ||
+            empty($data['email']) ||
+            empty($data['password'])
+        ) {
             return $this->json(['error' => 'Name, email and password are required'], 400);
         }
 
-        if (strlen($password) < 6) {
-            return $this->json(['error' => 'Password must be at least 6 characters'], 400);
+        try {
+            $result = $this->adminAuthService->register(
+                trim($data['name']),
+                trim($data['email']),
+                $data['password']
+            );
+
+            return $this->json($result, 201);
+        } catch (BadRequestHttpException $e) {
+            return $this->json(['error' => $e->getMessage()], 400);
+        } catch (ConflictHttpException $e) {
+            return $this->json(['error' => $e->getMessage()], 409);
         }
-
-        $existing = $this->em->getRepository(AdminEntity::class)
-            ->findOneBy(['email' => $email]);
-
-        if ($existing) {
-            return $this->json(['error' => 'Email already registered'], 409);
-        }
-
-        $admin = new AdminEntity(
-            Uuid::v4(),
-            $name,
-            $email,
-            $this->passwordService->hash($password)
-        );
-
-        $this->em->persist($admin);
-        $this->em->flush();
-
-        $accessToken = $this->jwtService->createAccessToken($admin->id, 'admin', $admin->email);
-        $refreshToken = $this->refreshTokenService->createRefreshToken($admin->id, 'admin');
-
-        return $this->json([
-            'user' => [
-                'id' => $admin->id->toRfc4122(),
-                'name' => $admin->name,
-                'email' => $admin->email,
-                'type' => 'admin',
-            ],
-            'accessToken' => $accessToken,
-            'refreshToken' => $refreshToken,
-        ], 201);
     }
+
 
     #[Route('/login', methods: ['POST'])]
     #[OA\Post(
@@ -152,34 +126,22 @@ final class AdminAuthController extends AbstractController
     {
         $data = $request->toArray();
 
-        $email = trim($data['email'] ?? '');
-        $password = $data['password'] ?? '';
-
-        if (!$email || !$password) {
+        if (empty($data['email']) || empty($data['password'])) {
             return $this->json(['error' => 'Email and password are required'], 400);
         }
 
-        $admin = $this->em->getRepository(AdminEntity::class)
-            ->findOneBy(['email' => $email]);
-
-        if (!$admin || !$this->passwordService->verify($password, $admin->passwordHash)) {
+        try {
+            return $this->json(
+                $this->adminAuthService->login(
+                    trim($data['email']),
+                    $data['password']
+                )
+            );
+        } catch (UnauthorizedHttpException) {
             return $this->json(['error' => 'Invalid credentials'], 401);
         }
-
-        $accessToken = $this->jwtService->createAccessToken($admin->id, 'admin', $admin->email);
-        $refreshToken = $this->refreshTokenService->createRefreshToken($admin->id, 'admin');
-
-        return $this->json([
-            'user' => [
-                'id' => $admin->id->toRfc4122(),
-                'name' => $admin->name,
-                'email' => $admin->email,
-                'type' => 'admin',
-            ],
-            'accessToken' => $accessToken,
-            'refreshToken' => $refreshToken,
-        ]);
     }
+
 
     #[Route('/refresh', methods: ['POST'])]
     #[OA\Post(
@@ -212,40 +174,15 @@ final class AdminAuthController extends AbstractController
     )]
     public function refresh(Request $request): JsonResponse
     {
-        $data = $request->toArray();
-        $refreshToken = $data['refreshToken'] ?? '';
+        $refreshToken = $request->toArray()['refreshToken'] ?? null;
 
         if (!$refreshToken) {
             return $this->json(['error' => 'Refresh token is required'], 400);
         }
 
-        $tokenEntity = $this->refreshTokenService->validateRefreshToken($refreshToken);
-
-        if (!$tokenEntity || $tokenEntity->userType !== 'admin') {
-            return $this->json(['error' => 'Invalid or expired refresh token'], 401);
-        }
-
-        $admin = $this->em->find(AdminEntity::class, $tokenEntity->userId);
-
-        if (!$admin) {
-            return $this->json(['error' => 'User not found'], 401);
-        }
-
-        $this->refreshTokenService->revokeRefreshToken($refreshToken);
-
-        $newAccessToken = $this->jwtService->createAccessToken($admin->id, 'admin', $admin->email);
-        $newRefreshToken = $this->refreshTokenService->createRefreshToken($admin->id, 'admin');
-
-        return $this->json([
-            'user' => [
-                'id' => $admin->id->toRfc4122(),
-                'name' => $admin->name,
-                'email' => $admin->email,
-                'type' => 'admin',
-            ],
-            'accessToken' => $newAccessToken,
-            'refreshToken' => $newRefreshToken,
-        ]);
+        return $this->json(
+            $this->adminAuthService->refresh($refreshToken)
+        );
     }
 
     #[Route('/logout', methods: ['POST'])]
@@ -267,12 +204,9 @@ final class AdminAuthController extends AbstractController
     )]
     public function logout(Request $request): JsonResponse
     {
-        $data = $request->toArray();
-        $refreshToken = $data['refreshToken'] ?? '';
+        $refreshToken = $request->toArray()['refreshToken'] ?? null;
 
-        if ($refreshToken) {
-            $this->refreshTokenService->revokeRefreshToken($refreshToken);
-        }
+        $this->adminAuthService->logout($refreshToken);
 
         return new JsonResponse(null, 204);
     }

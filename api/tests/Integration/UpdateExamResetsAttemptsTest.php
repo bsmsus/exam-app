@@ -4,63 +4,73 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
-use App\Application\Admin\UpdateExamService;
-use App\Infrastructure\Doctrine\ExamEntity;
-use App\Infrastructure\Doctrine\AttemptEntity;
-use App\Infrastructure\Doctrine\StudentEntity;
+use App\Application\Admin\AdminExamService;
+use App\Http\Admin\CreateOrUpdateExamRequest;
+use App\Infrastructure\Doctrine\Entity\AttemptEntity;
+use App\Infrastructure\Doctrine\Entity\ExamEntity;
+use App\Infrastructure\Doctrine\Entity\StudentEntity;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\Uid\Uuid;
 
 final class UpdateExamResetsAttemptsTest extends KernelTestCase
 {
+    private EntityManagerInterface $em;
+
     protected function setUp(): void
     {
         self::bootKernel();
-        $em = static::getContainer()->get(EntityManagerInterface::class);
-        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\AttemptEntity')->execute();
-        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\ExamEntity')->execute();
-        $em->createQuery('DELETE FROM App\Infrastructure\Doctrine\StudentEntity')->execute();
+
+        $this->em = static::getContainer()->get(EntityManagerInterface::class);
+
+        $this->em->createQuery('DELETE FROM ' . AttemptEntity::class)->execute();
+        $this->em->createQuery('DELETE FROM ' . ExamEntity::class)->execute();
+        $this->em->createQuery('DELETE FROM ' . StudentEntity::class)->execute();
     }
 
     public function test_exam_update_resets_attempts(): void
     {
-        $em = static::getContainer()->get(EntityManagerInterface::class);
-        $service = static::getContainer()->get(UpdateExamService::class);
+        $service = static::getContainer()->get(AdminExamService::class);
 
-        $student = new StudentEntity(
-            Uuid::v4(),
+        $student = StudentEntity::create(
             'Test Student',
             'student@test.com',
             'dummy_hash'
         );
-        $em->persist($student);
+        $this->em->persist($student);
 
-        $exam = new ExamEntity(Uuid::v4(), 'Math', 3, 60);
-        $em->persist($exam);
+        $exam = ExamEntity::create('Math', 3, 60);
+        $this->em->persist($exam);
 
-        $attempt = new AttemptEntity();
-        $attempt->id = Uuid::v4();
-        $attempt->exam = $exam;
-        $attempt->student = $student;
-        $attempt->attemptNumber = 1;
-        $attempt->status = 'COMPLETED';
-        $attempt->startedAt = new \DateTimeImmutable();
+        $attempt = AttemptEntity::create(
+            $exam,
+            $student,
+            1,
+            'COMPLETED'
+        );
+
         $attempt->endedAt = new \DateTimeImmutable();
 
-        $em->persist($attempt);
-        $em->flush();
+        $this->em->persist($attempt);
+        $this->em->flush();
 
         self::assertSame(
             1,
-            $em->getRepository(AttemptEntity::class)->count([])
+            $this->em->getRepository(AttemptEntity::class)->count([])
         );
 
-        $service->updateExam($exam->id, 'Updated', 5, 30);
+        $dto = new CreateOrUpdateExamRequest(
+            'Updated',
+            5,
+            30
+        );
+
+        $service->update($exam->id, $dto);
+
+        $this->em->clear();
 
         self::assertSame(
             0,
-            $em->getRepository(AttemptEntity::class)->count([])
+            $this->em->getRepository(AttemptEntity::class)->count([])
         );
     }
 }

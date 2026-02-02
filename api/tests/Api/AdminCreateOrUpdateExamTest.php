@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Api;
 
-use App\Infrastructure\Doctrine\ExamEntity;
-use App\Infrastructure\Doctrine\AttemptEntity;
+use App\Infrastructure\Doctrine\Entity\ExamEntity;
+use App\Infrastructure\Doctrine\Entity\AttemptEntity;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 
@@ -37,7 +37,7 @@ final class AdminCreateOrUpdateExamTest extends AuthenticatedWebTestCase
         $this->createTestStudent();
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
-        $exam = new ExamEntity(Uuid::v4(), 'Old', 3, 10);
+        $exam = ExamEntity::create('Old', 3, 60);
         $em->persist($exam);
         $em->flush();
 

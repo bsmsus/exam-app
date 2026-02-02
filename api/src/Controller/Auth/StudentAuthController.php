@@ -4,28 +4,19 @@ declare(strict_types=1);
 
 namespace App\Controller\Auth;
 
-use App\Application\Auth\JwtService;
-use App\Application\Auth\PasswordService;
-use App\Application\Auth\RefreshTokenService;
-use App\Infrastructure\Doctrine\StudentEntity;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Application\Auth\StudentAuthService;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Uid\Uuid;
 
 #[Route('/auth/student')]
 final class StudentAuthController extends AbstractController
 {
     public function __construct(
-        private EntityManagerInterface $em,
-        private JwtService $jwtService,
-        private PasswordService $passwordService,
-        private RefreshTokenService $refreshTokenService
-    ) {
-    }
+        private StudentAuthService $studentAuthService
+    ) {}
 
     #[Route('/register', methods: ['POST'])]
     #[OA\Post(
@@ -68,48 +59,21 @@ final class StudentAuthController extends AbstractController
     {
         $data = $request->toArray();
 
-        $name = trim($data['name'] ?? '');
-        $email = trim($data['email'] ?? '');
-        $password = $data['password'] ?? '';
-
-        if (!$name || !$email || !$password) {
+        if (
+            empty($data['name']) ||
+            empty($data['email']) ||
+            empty($data['password'])
+        ) {
             return $this->json(['error' => 'Name, email and password are required'], 400);
         }
 
-        if (strlen($password) < 6) {
-            return $this->json(['error' => 'Password must be at least 6 characters'], 400);
-        }
-
-        $existing = $this->em->getRepository(StudentEntity::class)
-            ->findOneBy(['email' => $email]);
-
-        if ($existing) {
-            return $this->json(['error' => 'Email already registered'], 409);
-        }
-
-        $student = new StudentEntity(
-            Uuid::v4(),
-            $name,
-            $email,
-            $this->passwordService->hash($password)
+        $result = $this->studentAuthService->register(
+            trim($data['name']),
+            trim($data['email']),
+            $data['password']
         );
 
-        $this->em->persist($student);
-        $this->em->flush();
-
-        $accessToken = $this->jwtService->createAccessToken($student->id, 'student', $student->email);
-        $refreshToken = $this->refreshTokenService->createRefreshToken($student->id, 'student');
-
-        return $this->json([
-            'user' => [
-                'id' => $student->id->toRfc4122(),
-                'name' => $student->name,
-                'email' => $student->email,
-                'type' => 'student',
-            ],
-            'accessToken' => $accessToken,
-            'refreshToken' => $refreshToken,
-        ], 201);
+        return $this->json($result, 201);
     }
 
     #[Route('/login', methods: ['POST'])]
@@ -152,33 +116,16 @@ final class StudentAuthController extends AbstractController
     {
         $data = $request->toArray();
 
-        $email = trim($data['email'] ?? '');
-        $password = $data['password'] ?? '';
-
-        if (!$email || !$password) {
+        if (empty($data['email']) || empty($data['password'])) {
             return $this->json(['error' => 'Email and password are required'], 400);
         }
 
-        $student = $this->em->getRepository(StudentEntity::class)
-            ->findOneBy(['email' => $email]);
-
-        if (!$student || !$this->passwordService->verify($password, $student->passwordHash)) {
-            return $this->json(['error' => 'Invalid credentials'], 401);
-        }
-
-        $accessToken = $this->jwtService->createAccessToken($student->id, 'student', $student->email);
-        $refreshToken = $this->refreshTokenService->createRefreshToken($student->id, 'student');
-
-        return $this->json([
-            'user' => [
-                'id' => $student->id->toRfc4122(),
-                'name' => $student->name,
-                'email' => $student->email,
-                'type' => 'student',
-            ],
-            'accessToken' => $accessToken,
-            'refreshToken' => $refreshToken,
-        ]);
+        return $this->json(
+            $this->studentAuthService->login(
+                trim($data['email']),
+                $data['password']
+            )
+        );
     }
 
     #[Route('/refresh', methods: ['POST'])]
@@ -212,40 +159,15 @@ final class StudentAuthController extends AbstractController
     )]
     public function refresh(Request $request): JsonResponse
     {
-        $data = $request->toArray();
-        $refreshToken = $data['refreshToken'] ?? '';
+        $refreshToken = $request->toArray()['refreshToken'] ?? null;
 
         if (!$refreshToken) {
             return $this->json(['error' => 'Refresh token is required'], 400);
         }
 
-        $tokenEntity = $this->refreshTokenService->validateRefreshToken($refreshToken);
-
-        if (!$tokenEntity || $tokenEntity->userType !== 'student') {
-            return $this->json(['error' => 'Invalid or expired refresh token'], 401);
-        }
-
-        $student = $this->em->find(StudentEntity::class, $tokenEntity->userId);
-
-        if (!$student) {
-            return $this->json(['error' => 'User not found'], 401);
-        }
-
-        $this->refreshTokenService->revokeRefreshToken($refreshToken);
-
-        $newAccessToken = $this->jwtService->createAccessToken($student->id, 'student', $student->email);
-        $newRefreshToken = $this->refreshTokenService->createRefreshToken($student->id, 'student');
-
-        return $this->json([
-            'user' => [
-                'id' => $student->id->toRfc4122(),
-                'name' => $student->name,
-                'email' => $student->email,
-                'type' => 'student',
-            ],
-            'accessToken' => $newAccessToken,
-            'refreshToken' => $newRefreshToken,
-        ]);
+        return $this->json(
+            $this->studentAuthService->refresh($refreshToken)
+        );
     }
 
     #[Route('/logout', methods: ['POST'])]
@@ -267,12 +189,9 @@ final class StudentAuthController extends AbstractController
     )]
     public function logout(Request $request): JsonResponse
     {
-        $data = $request->toArray();
-        $refreshToken = $data['refreshToken'] ?? '';
+        $refreshToken = $request->toArray()['refreshToken'] ?? null;
 
-        if ($refreshToken) {
-            $this->refreshTokenService->revokeRefreshToken($refreshToken);
-        }
+        $this->studentAuthService->logout($refreshToken);
 
         return new JsonResponse(null, 204);
     }

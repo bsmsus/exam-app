@@ -15,7 +15,7 @@ final class JwtService
 
     public function __construct()
     {
-        $this->secret = $_ENV['JWT_SECRET'] ?? 'change-this-secret-in-production';
+        $this->secret = $_ENV['JWT_SECRET'] ?? 'this-is-jwt-secret-key-in-dev';
     }
 
     public function createAccessToken(Uuid $userId, string $userType, string $email): string

@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
-use App\Application\Admin\UpdateExamService;
+use App\Application\Admin\AdminExamService;
 use App\Http\Admin\CreateOrUpdateExamRequest;
-use App\Infrastructure\Doctrine\ExamEntity;
-use App\Infrastructure\Doctrine\AttemptEntity;
-use App\Infrastructure\Doctrine\AdminEntity;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Infrastructure\Doctrine\Entity\AdminEntity;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -23,11 +20,9 @@ use Symfony\Component\Validator\Exception\ValidationFailedException;
 final class AdminExamController extends AbstractController
 {
     public function __construct(
-        private EntityManagerInterface $em,
-        private UpdateExamService $updateExamService,
+        private AdminExamService $adminExamService,
         private ValidatorInterface $validator
-    ) {
-    }
+    ) {}
 
     private function getCurrentAdmin(Request $request): ?AdminEntity
     {
@@ -67,35 +62,20 @@ final class AdminExamController extends AbstractController
     )]
     public function create(Request $request): JsonResponse
     {
-        $admin = $this->getCurrentAdmin($request);
-        if (!$admin) {
+        if (!$this->getCurrentAdmin($request)) {
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
-        $data = $request->toArray();
-        $dto = CreateOrUpdateExamRequest::fromArray($data);
+        $dto = CreateOrUpdateExamRequest::fromArray($request->toArray());
         $violations = $this->validator->validate($dto);
+
         if ($violations->count() > 0) {
-            return new JsonResponse(
-                ['error' => $violations[0]->getMessage()],
-                400
-            );
+            throw new ValidationFailedException($dto, $violations);
         }
 
-        $exam = new ExamEntity(
-            Uuid::v4(),
-            $dto->title,
-            $dto->maxAttempts,
-            $dto->cooldownMinutes
-        );
+        $examId = $this->adminExamService->create($dto);
 
-        $this->em->persist($exam);
-        $this->em->flush();
-
-        return $this->json(
-            ['examId' => $exam->id->toRfc4122()],
-            201
-        );
+        return $this->json(['examId' => $examId->toRfc4122()], 201);
     }
 
     #[Route('/{examId}', methods: ['PUT'])]
@@ -124,27 +104,22 @@ final class AdminExamController extends AbstractController
             new OA\Response(response: 404, description: 'Exam not found')
         ]
     )]
-    public function update(
-        string $examId,
-        Request $request
-    ): JsonResponse {
-        $admin = $this->getCurrentAdmin($request);
-        if (!$admin) {
+    public function update(string $examId, Request $request): JsonResponse
+    {
+        if (!$this->getCurrentAdmin($request)) {
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
-        $data = $request->toArray();
-        $dto = CreateOrUpdateExamRequest::fromArray($data);
+        $dto = CreateOrUpdateExamRequest::fromArray($request->toArray());
         $violations = $this->validator->validate($dto);
+
         if ($violations->count() > 0) {
             throw new ValidationFailedException($dto, $violations);
         }
 
-        $this->updateExamService->updateExam(
+        $this->adminExamService->update(
             Uuid::fromString($examId),
-            $dto->title,
-            $dto->maxAttempts,
-            $dto->cooldownMinutes
+            $dto
         );
 
         return new JsonResponse(null, 204);
@@ -178,26 +153,13 @@ final class AdminExamController extends AbstractController
     )]
     public function get(string $examId, Request $request): JsonResponse
     {
-        $admin = $this->getCurrentAdmin($request);
-        if (!$admin) {
+        if (!$this->getCurrentAdmin($request)) {
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
-        $exam = $this->em->find(
-            ExamEntity::class,
-            Uuid::fromString($examId)
+        return $this->json(
+            $this->adminExamService->get(Uuid::fromString($examId))
         );
-
-        if (!$exam) {
-            return $this->json(['error' => 'Exam not found'], 404);
-        }
-
-        return $this->json([
-            'id' => $exam->id->toRfc4122(),
-            'title' => $exam->title,
-            'maxAttempts' => $exam->maxAttempts,
-            'cooldownMinutes' => $exam->cooldownMinutes,
-        ]);
     }
 
     #[Route('', methods: ['GET'])]
@@ -227,22 +189,13 @@ final class AdminExamController extends AbstractController
     )]
     public function list(Request $request): JsonResponse
     {
-        $admin = $this->getCurrentAdmin($request);
-        if (!$admin) {
+        if (!$this->getCurrentAdmin($request)) {
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
-        $exams = $this->em->getRepository(ExamEntity::class)->findAll();
-
-        return $this->json(array_map(
-            static fn (ExamEntity $e) => [
-                'id' => $e->id->toRfc4122(),
-                'title' => $e->title,
-                'maxAttempts' => $e->maxAttempts,
-                'cooldownMinutes' => $e->cooldownMinutes,
-            ],
-            $exams
-        ));
+        return $this->json(
+            $this->adminExamService->list()
+        );
     }
 
     #[Route('/{examId}/attempts', methods: ['GET'])]
@@ -280,45 +233,14 @@ final class AdminExamController extends AbstractController
     )]
     public function attempts(string $examId, Request $request): JsonResponse
     {
-        $admin = $this->getCurrentAdmin($request);
-        if (!$admin) {
+        if (!$this->getCurrentAdmin($request)) {
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
-        $exam = $this->em->find(
-            ExamEntity::class,
-            Uuid::fromString($examId)
+        return $this->json(
+            $this->adminExamService->listAttempts(
+                Uuid::fromString($examId)
+            )
         );
-
-        if (!$exam) {
-            return $this->json(['error' => 'Exam not found'], 404);
-        }
-
-        $attempts = $this->em->createQuery(
-            'SELECT a
-             FROM App\Infrastructure\Doctrine\AttemptEntity a
-             WHERE a.exam = :exam
-             ORDER BY a.attemptNumber ASC'
-        )
-        ->setParameter('exam', $exam)
-        ->getResult();
-
-        $response = array_map(
-            static fn (AttemptEntity $a) => [
-                'id' => $a->id->toRfc4122(),
-                'studentId' => $a->student->id->toRfc4122(),
-                'studentName' => $a->student->name,
-                'studentEmail' => $a->student->email,
-                'attemptNumber' => $a->attemptNumber,
-                'status' => $a->status,
-                'startedAt' => $a->startedAt->setTimezone(new \DateTimeZone('UTC'))->format(DATE_ATOM),
-                'endedAt' => $a->endedAt
-                    ? $a->endedAt->setTimezone(new \DateTimeZone('UTC'))->format(DATE_ATOM)
-                    : null,
-            ],
-            $attempts
-        );
-
-        return $this->json($response);
     }
 }

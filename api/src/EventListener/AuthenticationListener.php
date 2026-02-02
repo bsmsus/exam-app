@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use App\Application\Auth\JwtService;
-use App\Infrastructure\Doctrine\AdminEntity;
-use App\Infrastructure\Doctrine\StudentEntity;
+use App\Infrastructure\Doctrine\Entity\AdminEntity;
+use App\Infrastructure\Doctrine\Entity\StudentEntity;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -28,8 +28,7 @@ final class AuthenticationListener
     public function __construct(
         private JwtService $jwtService,
         private EntityManagerInterface $em
-    ) {
-    }
+    ) {}
 
     public function __invoke(RequestEvent $event): void
     {

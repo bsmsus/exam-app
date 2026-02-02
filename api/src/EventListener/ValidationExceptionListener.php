@@ -24,14 +24,19 @@ class ValidationExceptionListener
         }
 
         $errors = [];
+        $messages = [];
 
         foreach ($violations as $violation) {
             $path = (string) $violation->getPropertyPath() ?: 'body';
             $path = trim($path, '[]');
-            $errors[$path][] = $violation->getMessage();
+            $message = $violation->getMessage();
+            $errors[$path][] = $message;
+            $messages[] = sprintf('%s: %s', $path, $message);
         }
 
-        $response = new JsonResponse(['errors' => $errors], JsonResponse::HTTP_BAD_REQUEST);
+        $errorString = implode('; ', $messages);
+
+        $response = new JsonResponse(['errors' => $errors, 'error' => $errorString], JsonResponse::HTTP_BAD_REQUEST);
         $event->setResponse($response);
     }
 }

@@ -3,13 +3,7 @@ export type { RootState, AppDispatch } from "./store";
 export { useAppDispatch, useAppSelector } from "./hooks";
 
 // Auth exports
-export {
-  login,
-  register,
-  logout,
-  refreshAccessToken,
-  clearError as clearAuthError,
-} from "./slices/authSlice";
+export { login, register, logout, refreshAccessToken, clearError as clearAuthError } from "./slices/authSlice";
 export type { User } from "./slices/authSlice";
 
 // Admin exports

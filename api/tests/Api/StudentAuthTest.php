@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Api;
 
 use App\Application\Auth\PasswordService;
-use App\Infrastructure\Doctrine\StudentEntity;
+use App\Infrastructure\Doctrine\Entity\StudentEntity;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Uid\Uuid;
 
 final class StudentAuthTest extends AuthenticatedWebTestCase
 {
@@ -35,12 +34,15 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         self::assertArrayHasKey('user', $data);
         self::assertArrayHasKey('accessToken', $data);
         self::assertArrayHasKey('refreshToken', $data);
+
         self::assertSame('Test Student', $data['user']['name']);
         self::assertSame('student@test.com', $data['user']['email']);
         self::assertSame('student', $data['user']['type']);
 
         $em = static::getContainer()->get(EntityManagerInterface::class);
-        $student = $em->getRepository(StudentEntity::class)->findOneBy(['email' => 'student@test.com']);
+        $student = $em->getRepository(StudentEntity::class)
+            ->findOneBy(['email' => 'student@test.com']);
+
         self::assertNotNull($student);
         self::assertSame('Test Student', $student->name);
     }
@@ -64,6 +66,7 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         );
 
         self::assertResponseStatusCodeSame(400);
+
         $data = json_decode($client->getResponse()->getContent(), true);
         self::assertSame('Name, email and password are required', $data['error']);
     }
@@ -87,6 +90,7 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         );
 
         self::assertResponseStatusCodeSame(400);
+
         $data = json_decode($client->getResponse()->getContent(), true);
         self::assertSame('Password must be at least 6 characters', $data['error']);
     }
@@ -95,15 +99,16 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
     {
         $client = static::createClient();
         $this->clearDatabase();
+
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $passwordService = static::getContainer()->get(PasswordService::class);
 
-        $student = new StudentEntity(
-            Uuid::v4(),
+        $student = StudentEntity::create(
             'Existing Student',
             'student@test.com',
             $passwordService->hash('password123')
         );
+
         $em->persist($student);
         $em->flush();
 
@@ -121,6 +126,7 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         );
 
         self::assertResponseStatusCodeSame(409);
+
         $data = json_decode($client->getResponse()->getContent(), true);
         self::assertSame('Email already registered', $data['error']);
     }
@@ -129,15 +135,16 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
     {
         $client = static::createClient();
         $this->clearDatabase();
+
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $passwordService = static::getContainer()->get(PasswordService::class);
 
-        $student = new StudentEntity(
-            Uuid::v4(),
+        $student = StudentEntity::create(
             'Test Student',
             'student@test.com',
             $passwordService->hash('password123')
         );
+
         $em->persist($student);
         $em->flush();
 
@@ -159,6 +166,7 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         self::assertArrayHasKey('user', $data);
         self::assertArrayHasKey('accessToken', $data);
         self::assertArrayHasKey('refreshToken', $data);
+
         self::assertSame('student@test.com', $data['user']['email']);
     }
 
@@ -166,15 +174,16 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
     {
         $client = static::createClient();
         $this->clearDatabase();
+
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $passwordService = static::getContainer()->get(PasswordService::class);
 
-        $student = new StudentEntity(
-            Uuid::v4(),
+        $student = StudentEntity::create(
             'Test Student',
             'student@test.com',
             $passwordService->hash('password123')
         );
+
         $em->persist($student);
         $em->flush();
 
@@ -191,6 +200,7 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         );
 
         self::assertResponseStatusCodeSame(401);
+
         $data = json_decode($client->getResponse()->getContent(), true);
         self::assertSame('Invalid credentials', $data['error']);
     }
@@ -213,6 +223,7 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         );
 
         self::assertResponseStatusCodeSame(401);
+
         $data = json_decode($client->getResponse()->getContent(), true);
         self::assertSame('Invalid credentials', $data['error']);
     }
@@ -222,7 +233,6 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         $client = static::createClient();
         $this->clearDatabase();
 
-        // First register to get tokens
         $client->request(
             'POST',
             '/auth/student/register',
@@ -239,7 +249,6 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         $registerData = json_decode($client->getResponse()->getContent(), true);
         $refreshToken = $registerData['refreshToken'];
 
-        // Now refresh the token
         $client->request(
             'POST',
             '/auth/student/refresh',
@@ -276,6 +285,7 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         );
 
         self::assertResponseStatusCodeSame(401);
+
         $data = json_decode($client->getResponse()->getContent(), true);
         self::assertSame('Invalid or expired refresh token', $data['error']);
     }
@@ -285,7 +295,6 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         $client = static::createClient();
         $this->clearDatabase();
 
-        // First register to get tokens
         $client->request(
             'POST',
             '/auth/student/register',
@@ -302,7 +311,6 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         $registerData = json_decode($client->getResponse()->getContent(), true);
         $refreshToken = $registerData['refreshToken'];
 
-        // Logout
         $client->request(
             'POST',
             '/auth/student/logout',
@@ -316,7 +324,6 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
 
         self::assertResponseStatusCodeSame(204);
 
-        // Verify refresh token no longer works
         $client->request(
             'POST',
             '/auth/student/refresh',
@@ -336,7 +343,6 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         $client = static::createClient();
         $this->clearDatabase();
 
-        // Register as admin
         $client->request(
             'POST',
             '/auth/admin/register',
@@ -353,7 +359,6 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         $adminData = json_decode($client->getResponse()->getContent(), true);
         $adminRefreshToken = $adminData['refreshToken'];
 
-        // Try to use admin token for student refresh
         $client->request(
             'POST',
             '/auth/student/refresh',
@@ -366,6 +371,7 @@ final class StudentAuthTest extends AuthenticatedWebTestCase
         );
 
         self::assertResponseStatusCodeSame(401);
+
         $data = json_decode($client->getResponse()->getContent(), true);
         self::assertSame('Invalid or expired refresh token', $data['error']);
     }

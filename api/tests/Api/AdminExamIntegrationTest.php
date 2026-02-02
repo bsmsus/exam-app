@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Api;
 
-use App\Infrastructure\Doctrine\ExamEntity;
-use App\Infrastructure\Doctrine\AttemptEntity;
+use App\Infrastructure\Doctrine\Entity\ExamEntity;
+use App\Infrastructure\Doctrine\Entity\AttemptEntity;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 
@@ -68,6 +68,7 @@ final class AdminExamIntegrationTest extends AuthenticatedWebTestCase
 
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $exam = $em->find(ExamEntity::class, Uuid::fromString($data['examId']));
+
         self::assertNotNull($exam);
         self::assertSame('Math Exam', $exam->title);
         self::assertSame(3, $exam->maxAttempts);
@@ -115,10 +116,12 @@ final class AdminExamIntegrationTest extends AuthenticatedWebTestCase
         $client = static::createClient();
         $this->clearDatabase();
         $this->createTestAdmin();
+
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
-        $exam1 = new ExamEntity(Uuid::v4(), 'Math Exam', 3, 60);
-        $exam2 = new ExamEntity(Uuid::v4(), 'Physics Exam', 5, 30);
+        $exam1 = ExamEntity::create('Math Exam', 3, 60);
+        $exam2 = ExamEntity::create('Physics Exam', 5, 30);
+
         $em->persist($exam1);
         $em->persist($exam2);
         $em->flush();
@@ -140,9 +143,10 @@ final class AdminExamIntegrationTest extends AuthenticatedWebTestCase
         $client = static::createClient();
         $this->clearDatabase();
         $this->createTestAdmin();
+
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
-        $exam = new ExamEntity(Uuid::v4(), 'Math Exam', 3, 60);
+        $exam = ExamEntity::create('Math Exam', 3, 60);
         $em->persist($exam);
         $em->flush();
 
@@ -166,6 +170,7 @@ final class AdminExamIntegrationTest extends AuthenticatedWebTestCase
         $this->requestAsAdmin($client, 'GET', '/admin/exams/' . Uuid::v4()->toRfc4122());
 
         self::assertResponseStatusCodeSame(404);
+
         $data = json_decode($client->getResponse()->getContent(), true);
         self::assertSame('Exam not found', $data['error']);
     }
@@ -175,22 +180,29 @@ final class AdminExamIntegrationTest extends AuthenticatedWebTestCase
         $client = static::createClient();
         $this->clearDatabase();
         $this->createTestAdmin();
+
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
-        $exam = new ExamEntity(Uuid::v4(), 'Old Title', 3, 60);
+        $exam = ExamEntity::create('Old Title', 3, 60);
         $em->persist($exam);
         $em->flush();
 
-        $this->requestAsAdmin($client, 'PUT', '/admin/exams/' . $exam->id->toRfc4122(), [
-            'title' => 'New Title',
-            'maxAttempts' => 5,
-            'cooldownMinutes' => 30,
-        ]);
+        $this->requestAsAdmin(
+            $client,
+            'PUT',
+            '/admin/exams/' . $exam->id->toRfc4122(),
+            [
+                'title' => 'New Title',
+                'maxAttempts' => 5,
+                'cooldownMinutes' => 30,
+            ]
+        );
 
         self::assertResponseStatusCodeSame(204);
 
         $em->clear();
         $updatedExam = $em->find(ExamEntity::class, $exam->id);
+
         self::assertSame('New Title', $updatedExam->title);
         self::assertSame(5, $updatedExam->maxAttempts);
         self::assertSame(30, $updatedExam->cooldownMinutes);
@@ -202,41 +214,38 @@ final class AdminExamIntegrationTest extends AuthenticatedWebTestCase
         $this->clearDatabase();
         $this->createTestAdmin();
         $student = $this->createTestStudent();
+
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
-        $exam = new ExamEntity(Uuid::v4(), 'Math Exam', 3, 60);
+        $exam = ExamEntity::create('Math Exam', 3, 60);
         $em->persist($exam);
 
-        $attempt1 = new AttemptEntity();
-        $attempt1->id = Uuid::v4();
-        $attempt1->exam = $exam;
-        $attempt1->student = $student;
-        $attempt1->attemptNumber = 1;
-        $attempt1->status = 'COMPLETED';
-        $attempt1->startedAt = new \DateTimeImmutable('-1 hour');
+        $attempt1 = AttemptEntity::create($exam, $student, 1, 'COMPLETED');
         $attempt1->endedAt = new \DateTimeImmutable('-30 minutes');
         $em->persist($attempt1);
 
-        $attempt2 = new AttemptEntity();
-        $attempt2->id = Uuid::v4();
-        $attempt2->exam = $exam;
-        $attempt2->student = $student;
-        $attempt2->attemptNumber = 2;
-        $attempt2->status = 'IN_PROGRESS';
-        $attempt2->startedAt = new \DateTimeImmutable();
+        $attempt2 = AttemptEntity::create($exam, $student, 2, 'IN_PROGRESS');
         $em->persist($attempt2);
 
         $em->flush();
 
         self::assertSame(2, $em->getRepository(AttemptEntity::class)->count([]));
 
-        $this->requestAsAdmin($client, 'PUT', '/admin/exams/' . $exam->id->toRfc4122(), [
-            'title' => 'Updated Math Exam',
-            'maxAttempts' => 5,
-            'cooldownMinutes' => 30,
-        ]);
+        $this->requestAsAdmin(
+            $client,
+            'PUT',
+            '/admin/exams/' . $exam->id->toRfc4122(),
+            [
+                'title' => 'Updated Math Exam',
+                'maxAttempts' => 5,
+                'cooldownMinutes' => 30,
+            ]
+        );
 
         self::assertResponseStatusCodeSame(204);
+
+        $em->clear();
+
         self::assertSame(0, $em->getRepository(AttemptEntity::class)->count([]));
     }
 
@@ -246,27 +255,29 @@ final class AdminExamIntegrationTest extends AuthenticatedWebTestCase
         $this->clearDatabase();
         $this->createTestAdmin();
         $student = $this->createTestStudent();
+
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
-        $exam = new ExamEntity(Uuid::v4(), 'Math Exam', 3, 60);
+        $exam = ExamEntity::create('Math Exam', 3, 60);
         $em->persist($exam);
 
-        $attempt = new AttemptEntity();
-        $attempt->id = Uuid::v4();
-        $attempt->exam = $exam;
-        $attempt->student = $student;
-        $attempt->attemptNumber = 1;
-        $attempt->status = 'COMPLETED';
+        $attempt = AttemptEntity::create($exam, $student, 1, 'COMPLETED');
         $attempt->startedAt = new \DateTimeImmutable('-30 minutes');
         $attempt->endedAt = new \DateTimeImmutable('-10 minutes');
+
         $em->persist($attempt);
         $em->flush();
 
-        $this->requestAsAdmin($client, 'GET', '/admin/exams/' . $exam->id->toRfc4122() . '/attempts');
+        $this->requestAsAdmin(
+            $client,
+            'GET',
+            '/admin/exams/' . $exam->id->toRfc4122() . '/attempts'
+        );
 
         self::assertResponseStatusCodeSame(200);
 
         $data = json_decode($client->getResponse()->getContent(), true);
+
         self::assertCount(1, $data);
         self::assertSame($attempt->id->toRfc4122(), $data[0]['id']);
         self::assertSame($student->id->toRfc4122(), $data[0]['studentId']);
@@ -284,9 +295,14 @@ final class AdminExamIntegrationTest extends AuthenticatedWebTestCase
         $this->clearDatabase();
         $this->createTestAdmin();
 
-        $this->requestAsAdmin($client, 'GET', '/admin/exams/' . Uuid::v4()->toRfc4122() . '/attempts');
+        $this->requestAsAdmin(
+            $client,
+            'GET',
+            '/admin/exams/' . Uuid::v4()->toRfc4122() . '/attempts'
+        );
 
         self::assertResponseStatusCodeSame(404);
+
         $data = json_decode($client->getResponse()->getContent(), true);
         self::assertSame('Exam not found', $data['error']);
     }
@@ -310,13 +326,18 @@ final class AdminExamIntegrationTest extends AuthenticatedWebTestCase
         $client = static::createClient();
         $this->clearDatabase();
         $this->createTestAdmin();
+
         $em = static::getContainer()->get(EntityManagerInterface::class);
 
-        $exam = new ExamEntity(Uuid::v4(), 'Math Exam', 3, 60);
+        $exam = ExamEntity::create('Math Exam', 3, 60);
         $em->persist($exam);
         $em->flush();
 
-        $this->requestAsAdmin($client, 'GET', '/admin/exams/' . $exam->id->toRfc4122() . '/attempts');
+        $this->requestAsAdmin(
+            $client,
+            'GET',
+            '/admin/exams/' . $exam->id->toRfc4122() . '/attempts'
+        );
 
         self::assertResponseStatusCodeSame(200);
 

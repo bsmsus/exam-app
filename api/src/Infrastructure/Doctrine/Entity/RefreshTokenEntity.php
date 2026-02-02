@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Doctrine;
+namespace App\Infrastructure\Doctrine\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
@@ -13,7 +13,9 @@ use Symfony\Component\Uid\Uuid;
 class RefreshTokenEntity
 {
     #[ORM\Id]
-    #[ORM\Column(type: 'uuid')]
+    #[ORM\Column(type: 'uuid', unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
     public Uuid $id;
 
     #[ORM\Column(type: 'string', length: 255, unique: true)]
@@ -31,23 +33,27 @@ class RefreshTokenEntity
     #[ORM\Column(type: 'datetimetz_immutable')]
     public \DateTimeImmutable $createdAt;
 
-    public function __construct(
-        Uuid $id,
+    public function isExpired(): bool
+    {
+        return $this->expiresAt < new \DateTimeImmutable();
+    }
+
+    private function __construct() {}
+
+    public static function create(
         string $token,
         Uuid $userId,
         string $userType,
         \DateTimeImmutable $expiresAt
-    ) {
-        $this->id = $id;
-        $this->token = $token;
-        $this->userId = $userId;
-        $this->userType = $userType;
-        $this->expiresAt = $expiresAt;
-        $this->createdAt = new \DateTimeImmutable();
-    }
+    ): self {
+        $self = new self();
 
-    public function isExpired(): bool
-    {
-        return $this->expiresAt < new \DateTimeImmutable();
+        $self->token = $token;
+        $self->userId = $userId;
+        $self->userType = $userType;
+        $self->expiresAt = $expiresAt;
+        $self->createdAt = new \DateTimeImmutable();
+
+        return $self;
     }
 }

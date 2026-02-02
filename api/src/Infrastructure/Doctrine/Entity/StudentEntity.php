@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Doctrine;
+namespace App\Infrastructure\Doctrine\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
@@ -12,7 +12,9 @@ use Symfony\Component\Uid\Uuid;
 class StudentEntity
 {
     #[ORM\Id]
-    #[ORM\Column(type: 'uuid')]
+    #[ORM\Column(type: 'uuid', unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
     public Uuid $id;
 
     #[ORM\Column(type: 'string', length: 255)]
@@ -27,16 +29,20 @@ class StudentEntity
     #[ORM\Column(type: 'datetimetz_immutable')]
     public \DateTimeImmutable $createdAt;
 
-    public function __construct(
-        Uuid $id,
+    private function __construct() {}
+
+    public static function create(
         string $name,
         string $email,
         string $passwordHash
-    ) {
-        $this->id = $id;
-        $this->name = $name;
-        $this->email = $email;
-        $this->passwordHash = $passwordHash;
-        $this->createdAt = new \DateTimeImmutable();
+    ): self {
+        $self = new self();
+
+        $self->name = $name;
+        $self->email = $email;
+        $self->passwordHash = $passwordHash;
+        $self->createdAt = new \DateTimeImmutable();
+
+        return $self;
     }
 }

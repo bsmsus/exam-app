@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Api;
 
 use App\Application\Auth\PasswordService;
-use App\Infrastructure\Doctrine\AdminEntity;
-use App\Infrastructure\Doctrine\RefreshTokenEntity;
+use App\Infrastructure\Doctrine\Entity\AdminEntity;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Uid\Uuid;
 
 final class AdminAuthTest extends AuthenticatedWebTestCase
 {
@@ -99,8 +97,7 @@ final class AdminAuthTest extends AuthenticatedWebTestCase
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $passwordService = static::getContainer()->get(PasswordService::class);
 
-        $admin = new AdminEntity(
-            Uuid::v4(),
+        $admin = AdminEntity::create(
             'Existing Admin',
             'admin@test.com',
             $passwordService->hash('password123')
@@ -133,8 +130,7 @@ final class AdminAuthTest extends AuthenticatedWebTestCase
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $passwordService = static::getContainer()->get(PasswordService::class);
 
-        $admin = new AdminEntity(
-            Uuid::v4(),
+        $admin = AdminEntity::create(
             'Test Admin',
             'admin@test.com',
             $passwordService->hash('password123')
@@ -170,8 +166,7 @@ final class AdminAuthTest extends AuthenticatedWebTestCase
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $passwordService = static::getContainer()->get(PasswordService::class);
 
-        $admin = new AdminEntity(
-            Uuid::v4(),
+        $admin = AdminEntity::create(
             'Test Admin',
             'admin@test.com',
             $passwordService->hash('password123')

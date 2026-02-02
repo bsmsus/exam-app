@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Doctrine;
+namespace App\Infrastructure\Doctrine\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
@@ -17,7 +17,9 @@ use Symfony\Component\Uid\Uuid;
 class AttemptEntity
 {
     #[ORM\Id]
-    #[ORM\Column(type: 'uuid')]
+    #[ORM\Column(type: 'uuid', unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
     public Uuid $id;
 
     #[ORM\ManyToOne(targetEntity: ExamEntity::class)]
@@ -39,4 +41,23 @@ class AttemptEntity
 
     #[ORM\Column(type: 'datetimetz_immutable', nullable: true)]
     public ?\DateTimeImmutable $endedAt = null;
+
+    private function __construct() {}
+
+    public static function create(
+        ExamEntity $exam,
+        StudentEntity $student,
+        int $attemptNumber,
+        string $status
+    ): self {
+        $self = new self();
+
+        $self->exam = $exam;
+        $self->student = $student;
+        $self->attemptNumber = $attemptNumber;
+        $self->status = $status;
+        $self->startedAt = new \DateTimeImmutable();
+
+        return $self;
+    }
 }

@@ -18,21 +18,21 @@ final class CreateOrUpdateExamRequest
     )]
     public string $title = '';
 
-    #[Assert\NotNull(message: 'maxAttempts is required')]
+    #[Assert\NotNull(message: 'Max attempts is required')]
     #[Assert\Type(type: 'integer')]
     #[Assert\Range(
         min: 1,
         max: 1000,
-        notInRangeMessage: 'maxAttempts must be between {{ min }} and {{ max }}'
+        notInRangeMessage: 'Max attempts must be between {{ min }} and {{ max }}'
     )]
     public int $maxAttempts = 0;
 
-    #[Assert\NotNull(message: 'cooldownMinutes is required')]
+    #[Assert\NotNull(message: 'Cooldown minutes is required')]
     #[Assert\Type(type: 'integer')]
     #[Assert\Range(
         min: 0,
         max: 525600,
-        notInRangeMessage: 'cooldownMinutes must be between {{ min }} and {{ max }}'
+        notInRangeMessage: 'Cooldown minutes must be between {{ min }} and {{ max }}'
     )]
     public int $cooldownMinutes = 0;
 

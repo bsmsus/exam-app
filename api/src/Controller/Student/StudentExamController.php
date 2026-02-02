@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Student;
 
-use App\Infrastructure\Doctrine\ExamEntity;
-use App\Infrastructure\Doctrine\AttemptEntity;
-use App\Infrastructure\Doctrine\StudentEntity;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Application\Student\StudentExamService;
+use App\Infrastructure\Doctrine\Entity\StudentEntity;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -19,9 +17,8 @@ use Symfony\Component\Uid\Uuid;
 final class StudentExamController extends AbstractController
 {
     public function __construct(
-        private EntityManagerInterface $em
-    ) {
-    }
+        private StudentExamService $studentExamService
+    ) {}
 
     private function getCurrentStudent(Request $request): ?StudentEntity
     {
@@ -61,23 +58,9 @@ final class StudentExamController extends AbstractController
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
-        $exams = $this->em->getRepository(ExamEntity::class)->findAll();
-
-        $result = [];
-        foreach ($exams as $exam) {
-            $attemptsCount = $this->em->getRepository(AttemptEntity::class)
-                ->count(['exam' => $exam, 'student' => $student]);
-
-            $result[] = [
-                'id' => $exam->id->toRfc4122(),
-                'title' => $exam->title,
-                'maxAttempts' => $exam->maxAttempts,
-                'attemptsRemaining' => max(0, $exam->maxAttempts - $attemptsCount),
-                'cooldownMinutes' => $exam->cooldownMinutes,
-            ];
-        }
-
-        return $this->json($result);
+        return $this->json(
+            $this->studentExamService->listExams($student)
+        );
     }
 
     #[Route('/exams/{examId}', methods: ['GET'])]
@@ -116,48 +99,12 @@ final class StudentExamController extends AbstractController
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
-        $exam = $this->em->find(ExamEntity::class, Uuid::fromString($examId));
-        if (!$exam) {
-            return $this->json(['error' => 'Exam not found'], 404);
-        }
-
-        $attempts = $this->em->getRepository(AttemptEntity::class)
-            ->findBy(['exam' => $exam, 'student' => $student], ['attemptNumber' => 'ASC']);
-
-        $now = new \DateTimeImmutable();
-        $attemptsCount = count($attempts);
-        $remaining = max(0, $exam->maxAttempts - $attemptsCount);
-
-        $cooldownUntil = null;
-        $canStart = true;
-
-        if ($attemptsCount > 0) {
-            $last = end($attempts);
-
-            if ($last->status === 'IN_PROGRESS') {
-                $canStart = false;
-            } elseif ($last->endedAt !== null) {
-                $cooldownUntil = $last->endedAt
-                    ->modify("+{$exam->cooldownMinutes} minutes");
-
-                if ($now < $cooldownUntil) {
-                    $canStart = false;
-                }
-            }
-        }
-
-        if ($remaining === 0) {
-            $canStart = false;
-        }
-
-        return $this->json([
-            'title' => $exam->title,
-            'maxAttempts' => $exam->maxAttempts,
-            'attemptsRemaining' => $remaining,
-            'cooldownMinutes' => $exam->cooldownMinutes,
-            'cooldownUntil' => $cooldownUntil?->format(DATE_ATOM),
-            'canStart' => $canStart,
-        ]);
+        return $this->json(
+            $this->studentExamService->examDashboard(
+                $student,
+                Uuid::fromString($examId)
+            )
+        );
     }
 
     #[Route('/exams/{examId}/start', methods: ['POST'])]
@@ -191,57 +138,12 @@ final class StudentExamController extends AbstractController
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
-        $exam = $this->em->find(ExamEntity::class, Uuid::fromString($examId));
-        if (!$exam) {
-            return $this->json(['error' => 'Exam not found'], 404);
-        }
+        $attemptId = $this->studentExamService->startAttempt(
+            $student,
+            Uuid::fromString($examId)
+        );
 
-        $attempts = $this->em->getRepository(AttemptEntity::class)
-            ->findBy(['exam' => $exam, 'student' => $student], ['attemptNumber' => 'ASC']);
-
-        if (count($attempts) >= $exam->maxAttempts) {
-            return $this->json(['error' => 'No attempts left'], 409);
-        }
-
-        if ($attempts) {
-            $last = end($attempts);
-
-            if ($last->status === 'IN_PROGRESS') {
-                return $this->json(['error' => 'Attempt already in progress'], 409);
-            }
-
-            $availableAt = $last->endedAt
-                ? $last->endedAt->modify("+{$exam->cooldownMinutes} minutes")
-                : null;
-
-            if ($availableAt && new \DateTimeImmutable() < $availableAt) {
-                return new JsonResponse(
-                    [
-                        'error' => sprintf(
-                            'Your next attempt will be available at %s',
-                            $availableAt->format('d M Y, h:i A')
-                        )
-                    ],
-                    409
-                );
-            }
-        }
-
-        $attempt = new AttemptEntity();
-        $attempt->id = Uuid::v4();
-        $attempt->exam = $exam;
-        $attempt->student = $student;
-        $attempt->attemptNumber = count($attempts) + 1;
-        $attempt->status = 'IN_PROGRESS';
-        $attempt->startedAt = new \DateTimeImmutable();
-        $attempt->endedAt = null;
-
-        $this->em->persist($attempt);
-        $this->em->flush();
-
-        return $this->json([
-            'attemptId' => $attempt->id->toRfc4122()
-        ], 201);
+        return $this->json(['attemptId' => $attemptId->toRfc4122()], 201);
     }
 
     #[Route('/attempts/{attemptId}/submit', methods: ['POST'])]
@@ -267,27 +169,10 @@ final class StudentExamController extends AbstractController
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
-        $attempt = $this->em->find(
-            AttemptEntity::class,
+        $this->studentExamService->submitAttempt(
+            $student,
             Uuid::fromString($attemptId)
         );
-
-        if (!$attempt) {
-            return $this->json(['error' => 'Attempt not found'], 404);
-        }
-
-        if ($attempt->student->id->toRfc4122() !== $student->id->toRfc4122()) {
-            return $this->json(['error' => 'Attempt not found'], 404);
-        }
-
-        if ($attempt->status !== 'IN_PROGRESS') {
-            return $this->json(['error' => 'Invalid attempt state'], 409);
-        }
-
-        $attempt->status = 'COMPLETED';
-        $attempt->endedAt = new \DateTimeImmutable();
-
-        $this->em->flush();
 
         return new JsonResponse(null, 204);
     }
@@ -327,21 +212,9 @@ final class StudentExamController extends AbstractController
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
-        $attempts = $this->em->getRepository(AttemptEntity::class)
-            ->findBy(['student' => $student], ['startedAt' => 'DESC']);
-
-        return $this->json(array_map(
-            static fn (AttemptEntity $a) => [
-                'id' => $a->id->toRfc4122(),
-                'examId' => $a->exam->id->toRfc4122(),
-                'examTitle' => $a->exam->title,
-                'attemptNumber' => $a->attemptNumber,
-                'status' => $a->status,
-                'startedAt' => $a->startedAt->format(DATE_ATOM),
-                'endedAt' => $a->endedAt?->format(DATE_ATOM),
-            ],
-            $attempts
-        ));
+        return $this->json(
+            $this->studentExamService->history($student)
+        );
     }
 
     #[Route('/exams/{examId}/current-attempt', methods: ['GET'])]
@@ -383,28 +256,11 @@ final class StudentExamController extends AbstractController
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
-        $exam = $this->em->find(ExamEntity::class, Uuid::fromString($examId));
-        if (!$exam) {
-            return $this->json(['error' => 'Exam not found'], 404);
-        }
-
-        $attempt = $this->em->getRepository(AttemptEntity::class)
-            ->findOneBy([
-                'exam' => $exam,
-                'student' => $student,
-                'status' => 'IN_PROGRESS'
-            ]);
-
-        if (!$attempt) {
-            return $this->json(['currentAttempt' => null]);
-        }
-
         return $this->json([
-            'currentAttempt' => [
-                'id' => $attempt->id->toRfc4122(),
-                'attemptNumber' => $attempt->attemptNumber,
-                'startedAt' => $attempt->startedAt->format(DATE_ATOM),
-            ]
+            'currentAttempt' => $this->studentExamService->currentAttempt(
+                $student,
+                Uuid::fromString($examId)
+            )
         ]);
     }
 }

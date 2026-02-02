@@ -13,14 +13,27 @@ import {
   clearAdminError,
   resetAdminForm,
 } from "../store";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { examSchema, type ExamFormData } from "./exam.validation";
 
 export default function AdminExam() {
   const dispatch = useAppDispatch();
   const [copied, setCopied] = useState(false);
 
   const { examsList, examId, title, maxAttempts, cooldownMinutes, attempts, error, isLoading } = useAppSelector(
-    (state) => state.admin
+    (state) => state.admin,
   );
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors, isValid },
+  } = useForm<ExamFormData>({
+    resolver: zodResolver(examSchema),
+    mode: "onChange",
+  });
 
   useEffect(() => {
     dispatch(loadExamsList());
@@ -113,8 +126,13 @@ export default function AdminExam() {
           id="exam-title"
           placeholder="Enter exam title"
           value={title}
-          onChange={(e) => dispatch(setTitle(e.target.value))}
+          onChange={(e) => {
+            const v = e.target.value;
+            dispatch(setTitle(v)); // Redux update
+            setValue("title", v, { shouldValidate: true }); // Tell RHF
+          }}
         />
+        <div className="error-slot">{errors.title && <p className="error-message">{errors.title.message}</p>}</div>
       </div>
 
       <div className="form-row">
@@ -123,26 +141,51 @@ export default function AdminExam() {
           <input
             id="max-attempts"
             type="number"
+            {...register("maxAttempts", { valueAsNumber: true })}
             value={maxAttempts}
-            onChange={(e) => dispatch(setMaxAttempts(+e.target.value))}
+            onChange={(e) => {
+              const v = +e.target.value;
+              dispatch(setMaxAttempts(v));
+              setValue("maxAttempts", v, { shouldValidate: true });
+            }}
           />
+          <div className="error-slot">
+            {errors.maxAttempts && <p className="error-message">{errors.maxAttempts.message}</p>}
+          </div>
         </div>
         <div className="form-group">
           <label htmlFor="cooldown">Cooldown (min)</label>
           <input
             id="cooldown"
             type="number"
+            {...register("cooldownMinutes", { valueAsNumber: true })}
             value={cooldownMinutes}
-            onChange={(e) => dispatch(setCooldownMinutes(+e.target.value))}
+            onChange={(e) => {
+              const v = +e.target.value;
+              dispatch(setCooldownMinutes(v));
+              setValue("cooldownMinutes", v, { shouldValidate: true });
+            }}
           />
+          <div className="error-slot">
+            {errors.cooldownMinutes && <p className="error-message">{errors.cooldownMinutes.message}</p>}
+          </div>
         </div>
       </div>
 
       <div className="button-group">
-        <button onClick={handleCreate} disabled={isLoading}>
+        <button
+          onClick={handleSubmit(() => handleCreate())}
+          disabled={!isValid || isLoading}
+          className="button-success"
+        >
           {isLoading ? "Creating..." : "Create Exam"}
         </button>
-        <button onClick={handleUpdate} disabled={!examId || isLoading} className="button-secondary">
+
+        <button
+          onClick={handleSubmit(() => handleUpdate())}
+          disabled={!examId || isLoading || !isValid}
+          className="button-secondary"
+        >
           {isLoading ? "Updating..." : "Update Exam"}
         </button>
         <button onClick={handleLoadAttempts} disabled={!examId || isLoading} className="button-secondary">
@@ -153,12 +196,7 @@ export default function AdminExam() {
       {examId && (
         <div className="success-message">
           Exam ID: <span className="mono">{examId}</span>
-          <button
-            type="button"
-            onClick={() => copyExamId(examId)}
-            className="copy-btn"
-            title="Copy to clipboard"
-          >
+          <button type="button" onClick={() => copyExamId(examId)} className="copy-btn" title="Copy to clipboard">
             {copied ? "Copied!" : "Copy"}
           </button>
         </div>

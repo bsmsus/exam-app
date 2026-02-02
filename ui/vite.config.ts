@@ -10,4 +10,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
   },
+  server: {
+    port: 3005,
+    strictPort: true, // fail loudly if port is taken
+  },
+
 })

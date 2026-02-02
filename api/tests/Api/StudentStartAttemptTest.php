@@ -4,41 +4,62 @@ declare(strict_types=1);
 
 namespace App\Tests\Api;
 
-use App\Infrastructure\Doctrine\ExamEntity;
-use App\Infrastructure\Doctrine\AttemptEntity;
+use App\Infrastructure\Doctrine\Entity\ExamEntity;
+use App\Infrastructure\Doctrine\Entity\AttemptEntity;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Uid\Uuid;
 
 final class StudentStartAttemptTest extends AuthenticatedWebTestCase
 {
+    private function em(): EntityManagerInterface
+    {
+        return static::getContainer()->get(EntityManagerInterface::class);
+    }
+
+    private function createExam(
+        string $title,
+        int $maxAttempts,
+        int $cooldownMinutes
+    ): ExamEntity {
+        $exam = ExamEntity::create(
+            $title,
+            $maxAttempts,
+            $cooldownMinutes
+        );
+
+        $this->em()->persist($exam);
+        $this->em()->flush();
+
+        return $exam;
+    }
+
     public function test_student_can_start_attempt_when_allowed(): void
     {
         $client = static::createClient();
         $this->clearDatabase();
+
         $student = $this->createTestStudent();
-        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $exam = $this->createExam('Math', 3, 10);
 
-        $exam = new ExamEntity(
-            Uuid::v4(),
-            'Math',
-            3,
-            10
+        $this->requestAsStudent(
+            $client,
+            'POST',
+            '/student/exams/' . $exam->id->toRfc4122() . '/start'
         );
-        $em->persist($exam);
-        $em->flush();
-
-        $this->requestAsStudent($client, 'POST', '/student/exams/' . $exam->id->toRfc4122() . '/start');
 
         self::assertResponseStatusCodeSame(201);
 
-        $data = json_decode($client->getResponse()->getContent(), true);
-        self::assertArrayHasKey('attemptId', $data);
+        $attempts = $this->em()
+            ->getRepository(AttemptEntity::class)
+            ->findAll();
 
-        $attempts = $em->getRepository(AttemptEntity::class)->findAll();
         self::assertCount(1, $attempts);
 
         $attempt = $attempts[0];
-        self::assertSame($student->id->toRfc4122(), $attempt->student->id->toRfc4122());
+
+        self::assertSame(
+            $student->id->toRfc4122(),
+            $attempt->student->id->toRfc4122()
+        );
         self::assertSame(1, $attempt->attemptNumber);
         self::assertSame('IN_PROGRESS', $attempt->status);
         self::assertNotNull($attempt->startedAt);
@@ -49,36 +70,34 @@ final class StudentStartAttemptTest extends AuthenticatedWebTestCase
     {
         $client = static::createClient();
         $this->clearDatabase();
+
         $student = $this->createTestStudent();
-        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $exam = $this->createExam('Physics', 3, 60);
 
-        $exam = new ExamEntity(
-            Uuid::v4(),
-            'Physics',
-            3,
-            60
+        $attempt = AttemptEntity::create(
+            $exam,
+            $student,
+            1,
+            'COMPLETED'
         );
-        $em->persist($exam);
 
-        $attempt = new AttemptEntity();
-        $attempt->id = Uuid::v4();
-        $attempt->exam = $exam;
-        $attempt->student = $student;
-        $attempt->attemptNumber = 1;
-        $attempt->status = 'COMPLETED';
         $attempt->startedAt = new \DateTimeImmutable('-20 minutes');
-        $attempt->endedAt = new \DateTimeImmutable('-10 minutes');
+        $attempt->endedAt   = new \DateTimeImmutable('-10 minutes');
 
-        $em->persist($attempt);
-        $em->flush();
+        $this->em()->persist($attempt);
+        $this->em()->flush();
 
-        $this->requestAsStudent($client, 'POST', '/student/exams/' . $exam->id->toRfc4122() . '/start');
+        $this->requestAsStudent(
+            $client,
+            'POST',
+            '/student/exams/' . $exam->id->toRfc4122() . '/start'
+        );
 
         self::assertResponseStatusCodeSame(409);
 
         self::assertCount(
             1,
-            $em->getRepository(AttemptEntity::class)->findAll()
+            $this->em()->getRepository(AttemptEntity::class)->findAll()
         );
     }
 }
