@@ -160,8 +160,8 @@ export default function StudentExam() {
       {/* Messages */}
       {message && <div className={isError ? "error-message" : "success-message"}>{message}</div>}
 
-      {/* Attempt History */}
-      <div className="attempt-history">
+      {/* Attempt History - hide when exam ID is invalid */}
+      {!isError && <div className="attempt-history">
         <h3>My Attempts History</h3>
         {attemptHistory.length === 0 ? (
           <p className="no-data">No attempts yet.</p>
@@ -213,7 +213,7 @@ export default function StudentExam() {
             </tbody>
           </table>
         )}
-      </div>
+      </div>}
     </>
   );
 }
