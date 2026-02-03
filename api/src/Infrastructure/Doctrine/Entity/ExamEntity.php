@@ -26,6 +26,8 @@ class ExamEntity
     #[ORM\Column(type: 'integer')]
     public int $cooldownMinutes;
 
+    private function __construct() {}
+
     public static function create(
         string $title,
         int $maxAttempts,
@@ -38,19 +40,6 @@ class ExamEntity
         $self->cooldownMinutes = $cooldownMinutes;
 
         return $self;
-    }
-
-    public function __construct(?Uuid $id = null, string $title = '', int $maxAttempts = 1, int $cooldownMinutes = 0)
-    {
-        if ($id !== null) {
-            $this->id = $id;
-        }
-
-        if ($title !== '') {
-            $this->title = $title;
-            $this->maxAttempts = $maxAttempts;
-            $this->cooldownMinutes = $cooldownMinutes;
-        }
     }
 
     public function update(

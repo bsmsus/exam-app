@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Application\Student;
 
 use App\Infrastructure\Doctrine\Entity\AttemptEntity;
-use App\Infrastructure\Doctrine\Entity\ExamEntity;
 use App\Infrastructure\Doctrine\Entity\StudentEntity;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Infrastructure\Doctrine\Repository\AttemptRepository;
+use App\Infrastructure\Doctrine\Repository\ExamRepository;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
@@ -15,16 +15,17 @@ use Symfony\Component\Uid\Uuid;
 final class StudentExamService
 {
     public function __construct(
-        private EntityManagerInterface $em
+        private ExamRepository $examRepository,
+        private AttemptRepository $attemptRepository
     ) {}
 
     public function listExams(StudentEntity $student): array
     {
-        $exams = $this->em->getRepository(ExamEntity::class)->findAll();
+        $results = $this->examRepository->findAllWithAttemptCounts($student);
 
-        return array_map(function (ExamEntity $exam) use ($student) {
-            $attemptsCount = $this->em->getRepository(AttemptEntity::class)
-                ->count(['exam' => $exam, 'student' => $student]);
+        return array_map(function (array $row) {
+            $exam = $row['exam'];
+            $attemptsCount = (int) $row['attemptCount'];
 
             return [
                 'id' => $exam->id->toRfc4122(),
@@ -33,18 +34,15 @@ final class StudentExamService
                 'attemptsRemaining' => max(0, $exam->maxAttempts - $attemptsCount),
                 'cooldownMinutes' => $exam->cooldownMinutes,
             ];
-        }, $exams);
+        }, $results);
     }
 
     public function examDashboard(StudentEntity $student, Uuid $examId): array
     {
-        $exam = $this->em->find(ExamEntity::class, $examId);
-        if (!$exam) {
-            throw new NotFoundHttpException('Exam not found');
-        }
+        $exam = $this->examRepository->get($examId);
 
-        $attempts = $this->em->getRepository(AttemptEntity::class)
-            ->findBy(['exam' => $exam, 'student' => $student], ['attemptNumber' => 'ASC']);
+        $attempts = $this->attemptRepository
+            ->findByExamAndStudentOrdered($exam, $student);
 
         $attemptsCount = count($attempts);
         $remaining = max(0, $exam->maxAttempts - $attemptsCount);
@@ -84,13 +82,10 @@ final class StudentExamService
 
     public function startAttempt(StudentEntity $student, Uuid $examId): Uuid
     {
-        $exam = $this->em->find(ExamEntity::class, $examId);
-        if (!$exam) {
-            throw new NotFoundHttpException('Exam not found');
-        }
+        $exam = $this->examRepository->get($examId);
 
-        $attempts = $this->em->getRepository(AttemptEntity::class)
-            ->findBy(['exam' => $exam, 'student' => $student], ['attemptNumber' => 'ASC']);
+        $attempts = $this->attemptRepository
+            ->findByExamAndStudentOrdered($exam, $student);
 
         if (count($attempts) >= $exam->maxAttempts) {
             throw new ConflictHttpException('No attempts left');
@@ -122,16 +117,16 @@ final class StudentExamService
             'IN_PROGRESS'
         );
 
-        $this->em->persist($attempt);
-        $this->em->flush();
+        $this->attemptRepository->save($attempt);
 
         return $attempt->id;
     }
 
     public function submitAttempt(StudentEntity $student, Uuid $attemptId): void
     {
-        $attempt = $this->em->find(AttemptEntity::class, $attemptId);
-        if (!$attempt || $attempt->student->id !== $student->id) {
+        $attempt = $this->attemptRepository->find($attemptId);
+
+        if (!$attempt || !$attempt->student->id->equals($student->id)) {
             throw new NotFoundHttpException('Attempt not found');
         }
 
@@ -142,13 +137,12 @@ final class StudentExamService
         $attempt->status = 'COMPLETED';
         $attempt->endedAt = new \DateTimeImmutable();
 
-        $this->em->flush();
+        $this->attemptRepository->flush();
     }
 
     public function history(StudentEntity $student): array
     {
-        $attempts = $this->em->getRepository(AttemptEntity::class)
-            ->findBy(['student' => $student], ['startedAt' => 'DESC']);
+        $attempts = $this->attemptRepository->findByStudentOrdered($student);
 
         return array_map(
             static fn(AttemptEntity $a) => [
@@ -166,16 +160,10 @@ final class StudentExamService
 
     public function currentAttempt(StudentEntity $student, Uuid $examId): ?array
     {
-        $exam = $this->em->find(ExamEntity::class, $examId);
-        if (!$exam) {
-            throw new NotFoundHttpException('Exam not found');
-        }
+        $exam = $this->examRepository->get($examId);
 
-        $attempt = $this->em->getRepository(AttemptEntity::class)->findOneBy([
-            'exam' => $exam,
-            'student' => $student,
-            'status' => 'IN_PROGRESS'
-        ]);
+        $attempt = $this->attemptRepository
+            ->findInProgressByExamAndStudent($exam, $student);
 
         if (!$attempt) {
             return null;

@@ -41,7 +41,6 @@ final class AdminExamService
             $dto->cooldownMinutes
         );
 
-        // domain rule
         $this->attemptRepository->deleteByExam($exam);
 
         $this->examRepository->flush();
