@@ -8,6 +8,8 @@ use App\Infrastructure\Doctrine\Entity\AttemptEntity;
 use App\Infrastructure\Doctrine\Entity\StudentEntity;
 use App\Infrastructure\Doctrine\Repository\AttemptRepository;
 use App\Infrastructure\Doctrine\Repository\ExamRepository;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
@@ -16,7 +18,8 @@ final class StudentExamService
 {
     public function __construct(
         private ExamRepository $examRepository,
-        private AttemptRepository $attemptRepository
+        private AttemptRepository $attemptRepository,
+        private EntityManagerInterface $entityManager
     ) {}
 
     public function listExams(StudentEntity $student): array
@@ -84,42 +87,48 @@ final class StudentExamService
     {
         $exam = $this->examRepository->get($examId);
 
-        $attempts = $this->attemptRepository
-            ->findByExamAndStudentOrdered($exam, $student);
+        try {
+            return $this->entityManager->wrapInTransaction(function () use ($exam, $student): Uuid {
+                $attempts = $this->attemptRepository
+                    ->findByExamAndStudentForUpdate($exam, $student);
 
-        if (count($attempts) >= $exam->maxAttempts) {
+                if (count($attempts) >= $exam->maxAttempts) {
+                    throw new ConflictHttpException('No attempts left');
+                }
+
+                if ($attempts) {
+                    $last = end($attempts);
+
+                    if ($last->status === 'IN_PROGRESS') {
+                        throw new ConflictHttpException('Attempt already in progress');
+                    }
+
+                    if ($last->endedAt) {
+                        $availableAt = $last->endedAt
+                            ->modify("+{$exam->cooldownMinutes} minutes");
+
+                        if (new \DateTimeImmutable() < $availableAt) {
+                            throw new ConflictHttpException(
+                                sprintf('Next attempt available at %s', $availableAt->format(DATE_ATOM))
+                            );
+                        }
+                    }
+                }
+
+                $attempt = AttemptEntity::create(
+                    $exam,
+                    $student,
+                    count($attempts) + 1,
+                    'IN_PROGRESS'
+                );
+
+                $this->attemptRepository->save($attempt);
+
+                return $attempt->id;
+            });
+        } catch (UniqueConstraintViolationException) {
             throw new ConflictHttpException('No attempts left');
         }
-
-        if ($attempts) {
-            $last = end($attempts);
-
-            if ($last->status === 'IN_PROGRESS') {
-                throw new ConflictHttpException('Attempt already in progress');
-            }
-
-            if ($last->endedAt) {
-                $availableAt = $last->endedAt
-                    ->modify("+{$exam->cooldownMinutes} minutes");
-
-                if (new \DateTimeImmutable() < $availableAt) {
-                    throw new ConflictHttpException(
-                        sprintf('Next attempt available at %s', $availableAt->format(DATE_ATOM))
-                    );
-                }
-            }
-        }
-
-        $attempt = AttemptEntity::create(
-            $exam,
-            $student,
-            count($attempts) + 1,
-            'IN_PROGRESS'
-        );
-
-        $this->attemptRepository->save($attempt);
-
-        return $attempt->id;
     }
 
     public function submitAttempt(StudentEntity $student, Uuid $attemptId): void

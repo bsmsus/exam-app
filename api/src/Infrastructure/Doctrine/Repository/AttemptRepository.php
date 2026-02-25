@@ -8,6 +8,7 @@ use App\Infrastructure\Doctrine\Entity\AttemptEntity;
 use App\Infrastructure\Doctrine\Entity\ExamEntity;
 use App\Infrastructure\Doctrine\Entity\StudentEntity;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\LockMode;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
@@ -59,6 +60,19 @@ final class AttemptRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    public function findByExamAndStudentForUpdate(ExamEntity $exam, StudentEntity $student): array
+    {
+        return $this->createQueryBuilder('a')
+            ->andWhere('a.exam = :exam')
+            ->andWhere('a.student = :student')
+            ->setParameter('exam', $exam)
+            ->setParameter('student', $student)
+            ->orderBy('a.attemptNumber', 'ASC')
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+            ->getResult();
+    }
+
     public function findByStudentOrdered(StudentEntity $student): array
     {
         return $this->createQueryBuilder('a')
@@ -94,13 +108,12 @@ final class AttemptRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function deleteByExam(ExamEntity $exam): void
+    public function removeAllByExam(ExamEntity $exam): void
     {
-        $this->createQueryBuilder('a')
-            ->delete()
-            ->where('a.exam = :exam')
-            ->setParameter('exam', $exam)
-            ->getQuery()
-            ->execute();
+        $attempts = $this->findByExamOrdered($exam);
+        $em = $this->getEntityManager();
+        foreach ($attempts as $attempt) {
+            $em->remove($attempt);
+        }
     }
 }

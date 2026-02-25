@@ -8,6 +8,7 @@ use App\Http\Admin\CreateOrUpdateExamRequest;
 use App\Infrastructure\Doctrine\Entity\ExamEntity;
 use App\Infrastructure\Doctrine\Repository\AttemptRepository;
 use App\Infrastructure\Doctrine\Repository\ExamRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
 
@@ -15,7 +16,8 @@ final class AdminExamService
 {
     public function __construct(
         private ExamRepository $examRepository,
-        private AttemptRepository $attemptRepository
+        private AttemptRepository $attemptRepository,
+        private EntityManagerInterface $entityManager
     ) {}
 
     public function create(CreateOrUpdateExamRequest $dto): Uuid
@@ -35,15 +37,16 @@ final class AdminExamService
     {
         $exam = $this->examRepository->get($examId);
 
-        $exam->update(
-            $dto->title,
-            $dto->maxAttempts,
-            $dto->cooldownMinutes
-        );
+        $this->entityManager->wrapInTransaction(function () use ($exam, $dto): void {
+            $exam->update(
+                $dto->title,
+                $dto->maxAttempts,
+                $dto->cooldownMinutes
+            );
 
-        $this->attemptRepository->deleteByExam($exam);
-
-        $this->examRepository->flush();
+            $this->attemptRepository->removeAllByExam($exam);
+            $this->examRepository->flush();
+        });
     }
 
     public function get(Uuid $examId): array

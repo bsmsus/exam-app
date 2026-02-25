@@ -10,8 +10,7 @@ RUN npm install
 # copy source
 COPY . .
 
-# build production assets
-RUN npm run build
+RUN VITE_API_BASE_URL=/api npm run build
 
 
 # ---------- runtime stage ----------

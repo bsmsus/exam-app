@@ -24,20 +24,20 @@ class AttemptEntity
 
     #[ORM\ManyToOne(targetEntity: ExamEntity::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    public ExamEntity $exam;
+    public readonly ExamEntity $exam;
 
     #[ORM\ManyToOne(targetEntity: StudentEntity::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    public StudentEntity $student;
+    public readonly StudentEntity $student;
 
     #[ORM\Column(type: 'integer')]
-    public int $attemptNumber;
+    public readonly int $attemptNumber;
 
     #[ORM\Column(type: 'string')]
     public string $status;
 
     #[ORM\Column(type: 'datetimetz_immutable')]
-    public \DateTimeImmutable $startedAt;
+    public readonly \DateTimeImmutable $startedAt;
 
     #[ORM\Column(type: 'datetimetz_immutable', nullable: true)]
     public ?\DateTimeImmutable $endedAt = null;

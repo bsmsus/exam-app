@@ -6,17 +6,17 @@ namespace App\Application\Auth;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Uid\Uuid;
 
 final class JwtService
 {
-    private const ACCESS_TOKEN_EXPIRY = 900; // 15 minutes
-    private string $secret;
+    private const ACCESS_TOKEN_EXPIRY = 900;
 
-    public function __construct()
-    {
-        $this->secret = $_ENV['JWT_SECRET'] ?? 'this-is-jwt-secret-key-in-dev';
-    }
+    public function __construct(
+        #[Autowire(env: 'JWT_SECRET')]
+        private string $secret
+    ) {}
 
     public function createAccessToken(Uuid $userId, string $userType, string $email): string
     {

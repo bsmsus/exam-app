@@ -1,0 +1,41 @@
+name: Build & Push Images
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Backend (API) image
+        run: |
+          docker build \
+            -t ghcr.io/${{ github.repository_owner }}/exam-api:${{ github.sha }} \
+            -f api/Dockerfile \
+            .
+
+      - name: Build Frontend (UI) image
+        run: |
+          docker build \
+            -t ghcr.io/${{ github.repository_owner }}/exam-ui:${{ github.sha }} \
+            -f ui/Dockerfile \
+            ui/
+
+      - name: Push Backend
+        run: docker push ghcr.io/${{ github.repository_owner }}/exam-api:${{ github.sha }}
+
+      - name: Push Frontend
+        run: docker push ghcr.io/${{ github.repository_owner }}/exam-ui:${{ github.sha }}
