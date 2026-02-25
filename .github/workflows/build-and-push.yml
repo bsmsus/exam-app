@@ -25,7 +25,7 @@ jobs:
           docker build \
             -t ghcr.io/${{ github.repository_owner }}/exam-api:${{ github.sha }} \
             -f api/Dockerfile \
-            .
+            api/
 
       - name: Build Frontend (UI) image
         run: |
