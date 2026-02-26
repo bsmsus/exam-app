@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: exam-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: exam-ui
+  template:
+    metadata:
+      labels:
+        app: exam-ui
+    spec:
+      containers:
+        - name: exam-ui
+          image: ghcr.io/bsmsus/exam-ui:8f58fc76c254602184a1631793c0726dca9e7f48
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80

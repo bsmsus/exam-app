@@ -14,10 +14,10 @@ spec:
     spec:
       containers:
         - name: exam-api
-          image: ghcr.io/bsmsus/exam-api:f0517d2b820ece945283b6612c0882d71eb9b97c
+          image: ghcr.io/bsmsus/exam-api:8f58fc76c254602184a1631793c0726dca9e7f48
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:
             - name: DATABASE_URL
-              value: postgresql://exam:exam@db:5432/exam
+              value: postgresql://exam:exam@db:5432/exam?serverVersion=16
