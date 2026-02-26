@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: exam-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: exam-api
+  template:
+    metadata:
+      labels:
+        app: exam-api
+    spec:
+      containers:
+        - name: exam-api
+          image: ghcr.io/bsmsus/exam-api:f0517d2b820ece945283b6612c0882d71eb9b97c
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: postgresql://exam:exam@db:5432/exam
